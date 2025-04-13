@@ -1,0 +1,31 @@
+import type { KirikiriEngine } from '../KirikiriEngine'
+import { z } from 'zod'
+
+const schema = z.object({
+  storage: z.string(),
+}).strict()
+
+/**
+ * Calls a script file.
+ */
+export function createCallCommand(engine: KirikiriEngine, defaultProps?: Record<string, string>): (props?: Record<string, string>) => Promise<void> {
+  return async (props?: Record<string, string>): Promise<void> => {
+    const parsed = schema.parse({
+      ...defaultProps,
+      ...props,
+    })
+
+    try {
+      const file = engine.getFullFilePath(parsed.storage)
+
+      if (!file) {
+        throw new Error(`File ${parsed.storage} not found in game files`)
+      }
+
+      engine.loadFile(file)
+    }
+    catch (error) {
+      engine.logger.debug(`Error loading file ${parsed.storage}: ${error}`)
+    }
+  }
+}

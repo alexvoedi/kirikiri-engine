@@ -1,0 +1,30 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "lib": [
+      "esnext",
+      "dom"
+    ],
+    "baseUrl": ".",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "types": [
+      "node",
+      "vitest/globals"
+    ],
+    "strict": true,
+    "strictNullChecks": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  },
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "__mocks__/**/*.ts",
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}

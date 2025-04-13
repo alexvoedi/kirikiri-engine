@@ -1,0 +1,54 @@
+{
+  "name": "kirikiri-engine",
+  "type": "module",
+  "version": "0.0.1",
+  "private": false,
+  "packageManager": "pnpm@10.8.0",
+  "description": "",
+  "author": "",
+  "license": "ISC",
+  "keywords": [],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.cts",
+  "bin": {
+    "kiri-cli": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsup --watch",
+    "build": "tsup",
+    "lint": "eslint .",
+    "test": "CI=0 FORCE_COLOR=1 vitest --watch --coverage --disableConsoleIntercept --silent false"
+  },
+  "peerDependencies": {
+    "konva": "^9.3.20"
+  },
+  "dependencies": {
+    "commander": "^13.1.0",
+    "consola": "^3.4.2",
+    "konva": "^9.3.20"
+  },
+  "devDependencies": {
+    "@antfu/eslint-config": "^4.12.0",
+    "@types/node": "^22.14.1",
+    "@vitest/coverage-istanbul": "^3.1.1",
+    "dotenv": "^16.5.0",
+    "eslint": "^9.24.0",
+    "iconv-lite": "^0.6.3",
+    "jsdom": "^26.0.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.1",
+    "zod": "^3.24.2"
+  }
+}
