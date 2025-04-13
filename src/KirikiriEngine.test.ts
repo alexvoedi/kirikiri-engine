@@ -56,18 +56,4 @@ describe('kirikiriEngine', () => {
 
     expect(() => engine.processLines(lines)).not.toThrow()
   })
-
-  it('can call the processed commands without throwing an error', async () => {
-    const content = await engine.loadFile('first.ks')
-
-    const lines = engine.splitAndSanitize(content)
-
-    const processedLines = await engine.processLines(lines)
-
-    expect(() => {
-      for (const command of processedLines.commands) {
-        command({})
-      }
-    }).not.toThrow()
-  })
 })

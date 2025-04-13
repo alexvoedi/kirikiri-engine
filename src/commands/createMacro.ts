@@ -13,18 +13,20 @@ export async function createMacro(engine: KirikiriEngine, props: Record<string, 
 
   return {
     name: parsed.name,
-    macro: async (props: Record<string, string>) => {
-      commands.forEach((command, index) => {
-        if (placeholders[index]) {
-          const requiredProps = {}
+    macro: async (props: Record<string, string>): Promise<void> => {
+      await Promise.all(
+        commands.map(async (command, index) => {
+          if (placeholders[index]) {
+            const requiredProps: Record<string, string> = {}
 
-          Object.entries(placeholders[index]).forEach(([key, value]) => {
-            props[key] = value
-          })
+            Object.keys(placeholders[index]).forEach((key) => {
+              requiredProps[key] = props[key]
+            })
 
-          command(requiredProps)
-        }
-      })
+            await command(requiredProps)
+          }
+        }),
+      )
     },
   }
 }

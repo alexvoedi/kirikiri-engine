@@ -9,7 +9,7 @@ describe('extractCommand', () => {
       command: 'command',
       props: {
         key1: 'value1',
-        key2: 'value2.jpg',
+        key2: 'value2',
       },
     })
   })

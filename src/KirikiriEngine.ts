@@ -1,8 +1,10 @@
 import type { ConsolaInstance } from 'consola'
+import type { State } from './enums/State'
 import type { Game } from './types/Game'
 import type { KirikiriEngineOptions } from './types/KirikiriEngineOptions'
 import { createConsola } from 'consola'
 import Konva from 'konva'
+import { ZodError } from 'zod'
 import { createMacro } from './commands/createMacro'
 import { UnknownCommandError } from './errors/UnknownCommandError'
 import { CommandFactory } from './factories/CommandFactory'
@@ -39,12 +41,12 @@ export class KirikiriEngine {
   /**
    * List of files that are not processed yet but were found during processing of a script.
    */
-  private readonly unprocessedFiles: string[]
+  private readonly unprocessedFiles: string[] = []
 
   /**
    * List of files that were processed.
    */
-  private readonly processdFiles: Record<string, unknown>
+  private readonly processdFiles: Record<string, unknown> = {}
 
   /**
    *  History
@@ -56,6 +58,11 @@ export class KirikiriEngine {
       output: false,
       enabled: false,
     }
+
+  /**
+   * Transition
+   */
+  private states: State[] = []
 
   /**
    * All available macros.
@@ -78,9 +85,6 @@ export class KirikiriEngine {
       width: container.offsetWidth,
       height: container.offsetHeight,
     })
-
-    this.unprocessedFiles = []
-    this.processdFiles = {}
 
     this.logger = createConsola({
       fancy: true,
@@ -111,12 +115,7 @@ export class KirikiriEngine {
     const content = await this.loadFile(this.game.entry)
     const lines = this.splitAndSanitize(content)
 
-    try {
-      await this.processLines(lines)
-    }
-    catch (e) {
-      this.logger.error(e)
-    }
+    await this.processLines(lines)
   }
 
   /**
@@ -200,93 +199,116 @@ export class KirikiriEngine {
 
       const firstCharacter = line.charAt(0)
 
-      switch (firstCharacter) {
-        case '*': {
-          const match = line.match(/^\*(.+)/)
+      try {
+        switch (firstCharacter) {
+          case '*': {
+            const match = line.match(/^\*(.+)/)
 
-          if (!match) {
-            throw new Error(`Invalid jump point line: ${line}`)
-          }
+            if (!match) {
+              throw new Error(`Invalid jump point line: ${line}`)
+            }
 
-          processedLines.jumpPoints.push({
-            name: match[1],
-            index,
-          })
-          index += 1
-          break
-        }
-
-        case '[': {
-          const { command, props } = extractCommand(line)
-
-          if (this.macros[command]) {
-            const macro = this.macros[command]
-
-            await macro(props)
-
+            processedLines.jumpPoints.push({
+              name: match[1],
+              index,
+            })
             index += 1
             break
           }
 
-          const isBlockCommand = checkIsBlockCommand(command)
-          if (isBlockCommand) {
-            const closingIndex = findClosingBlockCommandIndex(command, index, lines)
+          case '[': {
+            const { command, props } = extractCommand(line)
 
-            if (closingIndex === -1) {
-              throw new Error(`Missing closing block command for ${command} at line ${index + 1}`)
+            if (this.macros[command]) {
+              const macro = this.macros[command]
+
+              await macro(props)
+
+              index += 1
+              break
             }
 
-            // Get the lines between the opening and closing block command
-            const blockLines = lines.slice(index + 1, closingIndex)
+            const isBlockCommand = checkIsBlockCommand(command)
+            if (isBlockCommand) {
+              const closingIndex = findClosingBlockCommandIndex(command, index, lines)
 
-            switch (command) {
-              case 'macro': {
-                const { macro, name } = await createMacro(this, {
-                  ...props,
-                  lines: blockLines,
-                })
-
-                this.macros[name] = macro
+              if (closingIndex === -1) {
+                throw new Error(`Missing closing block command for ${command} at line ${index + 1}`)
               }
+
+              // Get the lines between the opening and closing block command
+              const blockLines = lines.slice(index + 1, closingIndex)
+
+              switch (command) {
+                case 'macro': {
+                  const { macro, name } = await createMacro(this, {
+                    ...props,
+                    lines: blockLines,
+                  })
+
+                  this.macros[name] = macro
+
+                  await macro(props)
+
+                  break
+                }
+                case 'link': {
+                  // todo
+                  break
+                }
+                case 'if': {
+                  // todo
+                  break
+                }
+              }
+
+              index = closingIndex + 1
+              break
             }
+            else {
+              try {
+                const commandFunction = CommandFactory.create(command, props, this)
+                processedLines.commands.push(commandFunction)
 
-            index = closingIndex + 1
-            break
-          }
-          else {
-            try {
-              const commandFunction = CommandFactory.create(command, props, this)
-              processedLines.commands.push(commandFunction)
+                const placeholders = getPlacholders(line)
 
-              const placeholders = getPlacholders(line)
-
-              if (Object.keys(placeholders).length > 0) {
                 processedLines.placeholders[index] = placeholders
               }
-            }
-            catch (error) {
-              if (error instanceof UnknownCommandError) {
-                this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+              catch (error) {
+                if (error instanceof UnknownCommandError) {
+                  this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+                }
+                else {
+                  this.logger.error(`Error processing command: ${command} at line ${index + 1}`, error)
+                }
               }
-              else {
-                this.logger.error(`Error processing command: ${command} at line ${index + 1}`, error)
-              }
-            }
 
+              index += 1
+              break
+            }
+          }
+
+          case '@': {
+            index += 1
+            break
+          }
+
+          default: {
             index += 1
             break
           }
         }
-
-        case '@': {
-          index += 1
-          break
+      }
+      catch (error) {
+        if (error instanceof ZodError) {
+          error.issues.forEach((issue) => {
+            if (issue.code === 'unrecognized_keys') {
+              this.logger.error(line, error)
+            }
+          })
         }
 
-        default: {
-          index += 1
-          break
-        }
+        index += 1
       }
     } while (index < lines.length)
 

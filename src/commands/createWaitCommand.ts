@@ -7,8 +7,14 @@ const schema = z.object({
     .refine(value => !Number.isNaN(value), { message: 'Invalid number for \'time\'' }),
   canskip: z.string().transform(value => value === 'true').optional(),
   mode: z.enum(['normal', 'until']).optional(),
+  cond: z.string().optional(),
 }).strict()
 
+/**
+ * Waits for the specified amount of milliseconds.
+ *
+ * The difference between `normal` and `until` is that `normal` will wait in all cases for the specified amount of time, while `until` will for the remaining time since the last `resetwait` command.
+ */
 export function createWaitCommand(_: KirikiriEngine, defaultProps?: Record<string, string>): (props?: Record<string, string>) => Promise<void> {
   return async (props?: Record<string, string>): Promise<void> => {
     const parsed = schema.parse({

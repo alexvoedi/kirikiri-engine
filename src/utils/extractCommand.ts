@@ -16,7 +16,9 @@ export function extractCommand(line: string) {
     const [key, value] = keyValueString.split('=')
 
     if (key && value) {
-      acc[key] = value.replace(/(^['"])|(['"]$)/g, '')
+      acc[key] = value
+        .replace(/(^['"])|(['"]$)/g, '') // Remove quotes
+        .replace(/\.[^/.]+$/, '') // Remove file extension
     }
 
     return acc
