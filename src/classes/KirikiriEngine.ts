@@ -259,6 +259,8 @@ export class KirikiriEngine {
 
       const firstCharacter = line.charAt(0)
 
+      console.log(line)
+
       try {
         switch (firstCharacter) {
           case '@':
@@ -278,10 +280,6 @@ export class KirikiriEngine {
             const isBlockCommand = checkIsBlockCommand(command)
             if (isBlockCommand) {
               const closingIndex = findClosingBlockCommandIndex(command, index, lines)
-
-              if (closingIndex === -1) {
-                throw new Error(`Missing closing block command for ${command} at line ${index + 1}`)
-              }
 
               // Get the lines between the opening and closing block command
               const blockLines = lines.slice(index + 1, closingIndex)
@@ -309,8 +307,7 @@ export class KirikiriEngine {
                 case 'if': {
                   await ifCommand(this, {
                     ...props,
-                    index,
-                    lines,
+                    lines: blockLines,
                   })
 
                   break
