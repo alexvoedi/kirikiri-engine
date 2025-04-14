@@ -9,7 +9,7 @@ describe('extractCommand', () => {
       command: 'command',
       props: {
         key1: 'value1',
-        key2: 'value2',
+        key2: 'value2.jpg',
       },
     })
   })
@@ -47,6 +47,28 @@ describe('extractCommand', () => {
       props: {
         key1: 'value1',
         key2: 'value2',
+      },
+    })
+  })
+
+  it('can extract the props of an if command', () => {
+    const line = '[if exp="sf.waitCnt==100"]'
+    const result = extractCommand(line)
+    expect(result).toEqual({
+      command: 'if',
+      props: {
+        exp: 'sf.waitCnt==100',
+      },
+    })
+  })
+
+  it('can extract the props of a complex if command', () => {
+    const line = '[if exp="sf.waitCnt==50 || sf.waitCnt==10"]'
+    const result = extractCommand(line)
+    expect(result).toEqual({
+      command: 'if',
+      props: {
+        exp: 'sf.waitCnt==50 || sf.waitCnt==10',
       },
     })
   })

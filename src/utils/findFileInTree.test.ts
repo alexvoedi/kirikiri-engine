@@ -18,6 +18,11 @@ describe('findFileInTree', () => {
         'screenshot.png': null,
       },
     },
+    'script': {
+      '08. other': {
+        'menu.ks': null,
+      },
+    },
   }
 
   it('should find a file without recursion', () => {
@@ -43,5 +48,10 @@ describe('findFileInTree', () => {
   it('should return an empty array for an empty tree', () => {
     const result = findFileInTree('README.md', {}, { recursive: true })
     expect(result).toEqual([])
+  })
+
+  it('can find files in directories with spaces', () => {
+    const result = findFileInTree('menu.ks', mockTree, { recursive: true })
+    expect(result).toEqual(['script/08. other/menu.ks'])
   })
 })

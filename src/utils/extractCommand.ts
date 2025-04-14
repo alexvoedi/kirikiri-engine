@@ -9,16 +9,17 @@ export function extractCommand(line: string) {
   }
 
   const [command, ...keyValueStrings] = commandLine
-    .split(' ')
-    .filter(str => str.trim() !== '')
+    .match(/(?:[^\s"']|"[^"]*"|'[^']*')+/g) // Match words or quoted substrings
+    ?.map(part => part.trim()) || [] // Trim each part
 
   const props = keyValueStrings.reduce((acc, keyValueString) => {
-    const [key, value] = keyValueString.split('=')
+    const match = keyValueString.match(/^([^=]+)=(.+)$/)
+    if (match) {
+      const key = match[1].trim()
+      const value = match[2].trim()
 
-    if (key && value) {
       acc[key] = value
         .replace(/(^['"])|(['"]$)/g, '') // Remove quotes
-        .replace(/\.[^/.]+$/, '') // Remove file extension
     }
 
     return acc

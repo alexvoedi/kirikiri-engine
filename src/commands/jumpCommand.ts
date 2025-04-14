@@ -24,26 +24,22 @@ export async function jumpCommand(engine: KirikiriEngine, props?: Record<string,
   const parsed = schema.parse(props)
 
   if ('storage' in parsed && 'target' in parsed) {
-    const jumpPoints = engine.jumpPoints[parsed.storage]
-
-    if (!jumpPoints) {
-      // ignore
-      return
-      throw new Error(`Jump point not found: ${parsed.storage}`)
-    }
+    const sanitizedTarget = parsed.target.replace(/^\*/, '')
 
     const lines = await engine.loadFile(parsed.storage)
 
-    const newJumpPoints = await engine.runLines(lines, jumpPoints[parsed.target])
-    engine.jumpPoints[parsed.storage] = newJumpPoints
+    await engine.runLines(lines)
+
+    await engine.runSubroutine(sanitizedTarget)
   }
 
   if ('storage' in parsed) {
-    console.log('storage')
     return
   }
 
   if ('target' in parsed) {
-    console.log('target')
+    const sanitizedTarget = parsed.target.replace(/^\*/, '')
+
+    await engine.runSubroutine(sanitizedTarget)
   }
 }

@@ -2,8 +2,6 @@ import type { FileTree } from 'src/types/FileTree'
 
 /**
  * Find the file with the given name in the file tree.
- *
- *
  */
 export function findFileInTree(
   file: string,
@@ -26,8 +24,7 @@ export function findFileInTree(
       const currentPath = path ? `${path}/${key}` : key
 
       if (
-        (ignoreCase ? key.toLowerCase() : key)
-        === (ignoreCase ? file.toLowerCase() : file)
+        (ignoreCase ? key.toLowerCase() : key).startsWith(ignoreCase ? file.toLowerCase() : file)
       ) {
         result.push(currentPath)
       }

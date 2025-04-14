@@ -21,6 +21,7 @@ export class IScriptParser {
     const compartment = new Compartment({
       ...this.context,
     })
+
     return compartment.evaluate(script)
   }
 

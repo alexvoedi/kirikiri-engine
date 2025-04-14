@@ -1,6 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 import { IScriptParser } from '../classes/IScriptParser'
+import { GLOBALS } from '../constants'
 
 const schema = z.object({
 }).strict()
@@ -9,27 +10,16 @@ export async function scriptCommand(engine: KirikiriEngine, lines: string[], pro
   schema.parse(props)
 
   const context = {
-    System: {
-      shellExecute: () => null,
-      exePath: undefined,
-      inform: () => null,
-      exit: () => null,
-      readRegValue: () => null,
-    },
-    Storages: {
-      getLocalName: () => null,
-    },
+    ...GLOBALS,
     ...engine.globalScriptContext,
   }
 
-  const x = new IScriptParser(context)
+  const parser = new IScriptParser(context)
 
-  const parsed = x.parse(lines.join('\n'))
+  const parsed = parser.parse(lines.join('\n'))
 
   try {
-    const result = x.run(parsed)
-
-    return result
+    return await parser.run(parsed)
   }
   catch (e) {
     engine.logger.error('Error running script:', e)

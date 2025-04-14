@@ -19,4 +19,10 @@ describe('sanitizeLine', () => {
     const output = sanitizeLine(input)
     expect(output).toBe('')
   })
+
+  it('should not remove slashes if there is something after them', () => {
+    const input = 'hello world\\test123'
+    const output = sanitizeLine(input)
+    expect(output).toBe('hello world\\test123')
+  })
 })

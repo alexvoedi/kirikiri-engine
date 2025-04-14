@@ -1,18 +1,8 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
-import { z } from 'zod'
 import { IScriptParser } from '../classes/IScriptParser'
 import { GLOBALS } from '../constants'
 
-const schema = z.object({
-  exp: z.string(),
-}).strict()
-
-/**
- * Evaluates an expression
- */
-export async function evalCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  const parsed = schema.parse(props)
-
+export async function checkCondition(engine: KirikiriEngine, expression: string) {
   const context = {
     ...GLOBALS,
     ...engine.globalScriptContext,
@@ -20,12 +10,15 @@ export async function evalCommand(engine: KirikiriEngine, props?: Record<string,
 
   const parser = new IScriptParser(context)
 
-  const parsedCondition = parser.parse(parsed.exp)
+  const parsedCondition = parser.parse(expression)
 
   try {
-    await parser.run(parsedCondition)
+    const result = await parser.run(parsedCondition)
+
+    return result
   }
   catch (e) {
     engine.logger.error('Error in condition:', e)
+    return false
   }
 }

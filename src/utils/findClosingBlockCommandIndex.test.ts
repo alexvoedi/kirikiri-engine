@@ -45,4 +45,18 @@ describe('findClosingBlockCommandIndex', () => {
     const result = findClosingBlockCommandIndex('iscript', 0, ['[iscript]', 'hello world', '', '[endscript]'])
     expect(result).toBe(3)
   })
+
+  it('should work for nested if blocks', () => {
+    const result = findClosingBlockCommandIndex('if', 0, [
+      '[if exp="f.testmode==0"]',
+      '  [if exp="sf.firstclear==0"]',
+      '  [jump storage="prologue.ks" target=*gameStart]',
+      '  [endif]',
+      '  [if exp="sf.firstclear==1"]',
+      '  [jump storage="menu.ks" target=*gameStart][endif]',
+      '  [s]',
+      '[endif]',
+    ])
+    expect(result).toBe(7)
+  })
 })

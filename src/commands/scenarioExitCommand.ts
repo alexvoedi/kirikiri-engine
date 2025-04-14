@@ -4,7 +4,7 @@ import { z } from 'zod'
 const schema = z.object({}).strict()
 
 /**
- * The `s` command.
+ * Implements the `s` command.
  *
  * Stops the execution of the current scenario (started by a `*` command)
  */

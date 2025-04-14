@@ -1,7 +1,6 @@
 import type { ConsolaInstance } from 'consola'
 import type { State } from '../enums/State'
 import type { Game } from '../types/Game'
-import type { JumpPoints } from '../types/JumpPoints'
 import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
 import { createConsola } from 'consola'
 import { ZodError } from 'zod'
@@ -15,7 +14,9 @@ import { copyFrontToBackLayerCommand } from '../commands/copyFrontToBackLayerCom
 import { delayCommand } from '../commands/delayCommand'
 import { embeddedTagCommand } from '../commands/embeddedTagCommand'
 import { evalCommand } from '../commands/evalCommand'
+import { fadeBackgroundMusicInCommand } from '../commands/fadeBackgroundMusicInCommand'
 import { historyCommand } from '../commands/historyCommand'
+import { ifCommand } from '../commands/ifCommand'
 import { imageCommand } from '../commands/imageCommand'
 import { jumpCommand } from '../commands/jumpCommand'
 import { layerOptionCommand } from '../commands/layerOptionCommand'
@@ -42,6 +43,7 @@ import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
+import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
 import { isComment } from '../utils/isComment'
 import { sanitizeLine } from '../utils/sanitizeLine'
 import { splitMultiCommandLine } from '../utils/splitMultiCommandLine'
@@ -74,11 +76,6 @@ export class KirikiriEngine {
   private readonly unprocessedFiles: string[] = []
 
   /**
-   * Processed files.
-   */
-  jumpPoints: JumpPoints = {}
-
-  /**
    *  History
    */
   readonly history: {
@@ -90,11 +87,6 @@ export class KirikiriEngine {
     }
 
   /**
-   * Transition
-   */
-  private states: State[] = []
-
-  /**
    * Counts how often a command was called.
    */
   readonly commandCallCount: Record<string, number> = {}
@@ -103,6 +95,11 @@ export class KirikiriEngine {
    * All available macros.
    */
   readonly macros: Record<string, (props: Record<string, string>) => Promise<void>> = {}
+
+  /**
+   * All available subroutines.
+   */
+  readonly subroutines: Record<string, string[]> = {}
 
   /**
    * Global script context.
@@ -116,10 +113,10 @@ export class KirikiriEngine {
       },
     },
     sf: {
-      firstclear: undefined,
+      firstclear: 1,
     },
     f: {
-      testmode: undefined,
+      testmode: 0,
     },
   }
 
@@ -151,10 +148,11 @@ export class KirikiriEngine {
 
     const lines = await this.loadFile(this.game.entry)
 
-    const jumpPoints = await this.runLines(lines)
-    this.jumpPoints[this.game.entry] = jumpPoints
+    await this.runLines(lines)
+    await this.runSubroutine('start')
+    await this.runSubroutine('alpharom')
 
-    this.printCommandCallCount()
+    // this.printCommandCallCount()
   }
 
   /**
@@ -220,9 +218,7 @@ export class KirikiriEngine {
   /**
    * Execute the lines.
    */
-  async runLines(lines: string[], index = 0): Promise<Record<string, number>> {
-    const jumpPoints: Record<string, number> = {}
-
+  async runLines(lines: string[], index = 0): Promise<void> {
     do {
       const line = lines[index]
 
@@ -231,26 +227,43 @@ export class KirikiriEngine {
       try {
         switch (firstCharacter) {
           case '*': {
-            const match = line.match(/^\*(.+)/)
+            const closingIndex = findSubroutineEndIndex(index, lines)
+
+            if (closingIndex === -1) {
+              throw new Error(`Could not find end of subroutine for ${line} at line ${index + 1}`)
+            }
+
+            const match = line.match(/^\*(.+)/) // find the name of the subroutine
 
             if (!match) {
               throw new Error(`Invalid jump point line: ${line}`)
             }
 
-            jumpPoints[match[1]] = index
+            const subroutineName = match[1].trim()
 
-            index += 1
+            if (this.subroutines[subroutineName]) {
+              throw new Error(`Subroutine ${subroutineName} already defined at line ${index + 1}`)
+            }
+
+            // Get the lines of the subroutine
+            const subroutineLines = lines.slice(index + 1, closingIndex)
+
+            this.subroutines[subroutineName] = subroutineLines
+
+            this.logger.info('Registered new subroutine:', subroutineName)
+
+            index = closingIndex + 1
             break
           }
 
+          case '@':
           case '[': {
             const { command, props } = extractCommand(line)
 
             this.updateCommandCallCount(command)
 
-            if (this.macros[command]) {
-              const macro = this.macros[command]
-
+            const macro = this.macros[command]
+            if (macro) {
               await macro(props)
 
               index += 1
@@ -258,6 +271,7 @@ export class KirikiriEngine {
             }
 
             const isBlockCommand = checkIsBlockCommand(command)
+
             if (isBlockCommand) {
               const closingIndex = findClosingBlockCommandIndex(command, index, lines)
 
@@ -289,7 +303,11 @@ export class KirikiriEngine {
                   break
                 }
                 case 'if': {
-                  // todo
+                  await ifCommand(this, {
+                    ...props,
+                    lines: blockLines,
+                  })
+
                   break
                 }
               }
@@ -317,11 +335,6 @@ export class KirikiriEngine {
             }
           }
 
-          case '@': {
-            index += 1
-            break
-          }
-
           default: {
             index += 1
             break
@@ -336,12 +349,14 @@ export class KirikiriEngine {
             }
           })
         }
+        else {
+          console.log(lines)
+          this.logger.error(`Error processing line ${index}: ${line}`, error)
+        }
 
         index += 1
       }
     } while (index < lines.length)
-
-    return jumpPoints
   }
 
   /**
@@ -351,7 +366,7 @@ export class KirikiriEngine {
   /**
    * Adds a command to the call count or increments it if it already exists.
    */
-  private updateCommandCallCount(command: string) {
+  updateCommandCallCount(command: string) {
     if (!this.commandCallCount[command]) {
       this.commandCallCount[command] = 0
     }
@@ -473,8 +488,25 @@ export class KirikiriEngine {
         // TODO: find out what this does
         return async () => { }
       }
+      case 'fadeinbgm': {
+        return fadeBackgroundMusicInCommand
+      }
     }
 
     throw new UnknownCommandError(command)
+  }
+
+  async runSubroutine(name: string) {
+    const subroutine = this.subroutines[name]
+
+    if (!subroutine) {
+      // ignore for now
+      // throw new Error(`Subroutine ${name} not found`)
+      return
+    }
+
+    this.logger.info(`Running subroutine ${name}`)
+
+    await this.runLines(subroutine)
   }
 }
