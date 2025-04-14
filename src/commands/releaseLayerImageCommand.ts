@@ -1,4 +1,4 @@
-import type { KirikiriEngine } from '../KirikiriEngine'
+import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 import { createPageSchema } from '../schemas/zod'
 

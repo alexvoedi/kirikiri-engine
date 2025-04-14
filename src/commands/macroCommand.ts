@@ -1,4 +1,4 @@
-import type { KirikiriEngine } from '../KirikiriEngine'
+import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z, ZodError } from 'zod'
 import { extractCommand } from '../utils/extractCommand'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'

@@ -4,21 +4,24 @@ import { checkIsCommand } from './checkIsCommand'
  * Check if there are multiple commands in a single line and split them.
  *
  * Example: [if exp="kag.clickCount!=0"][jump target=*buttontest][endif]
+ * Example: [iscript]print("Hello, World!")[endscript]
  */
 export function splitMultiCommandLine(line: string): string[] {
-  const regex = /\[[^\]]+\]/g
+  const regex = /(\[[^\]]+\])|([^[\]]+)/g
 
   const lines: string[] = []
 
-  line.matchAll(regex).forEach((match) => {
-    const command = match[0]
+  for (const match of line.matchAll(regex)) {
+    const part = match[0].trim()
 
-    if (!checkIsCommand(command)) {
-      throw new Error(`Malformed command: ${command}`)
+    if (part.startsWith('[') && part.endsWith(']')) {
+      if (!checkIsCommand(part)) {
+        throw new Error(`Malformed command: ${part}`)
+      }
     }
 
-    lines.push(command)
-  })
+    lines.push(part)
+  }
 
   return lines
 }

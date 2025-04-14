@@ -1,4 +1,4 @@
-import type { Game } from './types/Game'
+import type { Game } from '../types/Game'
 import process from 'node:process'
 import dotenv from 'dotenv'
 import { describe, expect, it } from 'vitest'
@@ -30,29 +30,16 @@ describe('kirikiriEngine', () => {
   })
 
   it('should be able to load the file content with the correct encoding', async () => {
-    const content = await engine.loadFile('first.ks')
-
-    expect(content).toBeDefined()
-    expect(content.startsWith(';=')).toBe(true)
-
-    // eslint-disable-next-line style/no-tabs
-    expect(content.includes(';	□とりあえず、このテキストから始まる。')).toBe(true)
-  })
-
-  it('should be able to split and sanitize the content', async () => {
-    const content = await engine.loadFile('first.ks')
-
-    const lines = engine.splitAndSanitize(content)
+    const lines = await engine.loadFile('first.ks')
 
     expect(lines).toBeDefined()
-    expect(lines.length).toBeGreaterThan(0)
-    expect(lines[0]).toBe('[wait time=100]')
+    expect(lines[0].startsWith('[wait time=100]')).toBe(true)
+
+    expect(lines.some((line) => line.includes('シナリオ'))).toBe(true)
   })
 
   it('can process lines without throwing an error', async () => {
-    const content = await engine.loadFile('first.ks')
-
-    const lines = engine.splitAndSanitize(content)
+    const lines = await engine.loadFile('first.ks')
 
     expect(() => engine.runLines(lines)).not.toThrow()
   })

@@ -8,12 +8,6 @@ describe('sanitizeLine', () => {
     expect(output).toBe('hello world')
   })
 
-  it('should remove trailing backslashes', () => {
-    const input = 'hello world\\'
-    const output = sanitizeLine(input)
-    expect(output).toBe('hello world')
-  })
-
   it('should handle strings with no modifications needed', () => {
     const input = 'hello world'
     const output = sanitizeLine(input)
@@ -24,11 +18,5 @@ describe('sanitizeLine', () => {
     const input = ''
     const output = sanitizeLine(input)
     expect(output).toBe('')
-  })
-
-  it('should handle strings with both whitespace and trailing backslashes', () => {
-    const input = '   hello world\\   '
-    const output = sanitizeLine(input)
-    expect(output).toBe('hello world')
   })
 })

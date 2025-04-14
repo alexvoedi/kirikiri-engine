@@ -1,49 +1,50 @@
 import type { ConsolaInstance } from 'consola'
-import type { State } from './enums/State'
-import type { Game } from './types/Game'
-import type { KirikiriEngineOptions } from './types/KirikiriEngineOptions'
-import type { ProcessedFile } from './types/ProcessedFile'
+import type { State } from '../enums/State'
+import type { Game } from '../types/Game'
+import type { JumpPoints } from '../types/JumpPoints'
+import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
 import { createConsola } from 'consola'
 import { ZodError } from 'zod'
-import { buttonCommand } from './commands/buttonCommand'
-import { callCommand } from './commands/callCommand'
-import { changeLayerCountCommand } from './commands/changeLayerCountCommand'
-import { characterPositionCommand } from './commands/characterPositionCommand'
-import { clearMessageCommand } from './commands/clearMessageCommand'
-import { copyFrontToBackLayerCommand } from './commands/copyFrontToBackLayerCommand'
-import { waitCommand } from './commands/waitCommand'
-import { waitForMovementCommand } from './commands/waitForMovementCommand'
-import { waitForSoundEffectCommand } from './commands/waitForSoundEffectCommand'
-import { delayCommand } from './commands/delayCommand'
-import { embeddedTagCommand } from './commands/embeddedTagCommand'
-import { evalCommand } from './commands/evalCommand'
-import { historyCommand } from './commands/historyCommand'
-import { imageCommand } from './commands/imageCommand'
-import { jumpCommand } from './commands/jumpCommand'
-import { layerOptionCommand } from './commands/layerOptionCommand'
-import { loadPluginCommand } from './commands/loadPluginCommand'
-import { createMacro } from './commands/macroCommand'
-import { moveCommand } from './commands/moveCommand'
-import { playSoundEffectCommand } from './commands/playSoundEffectCommand'
-import { positionCommand } from './commands/positionCommand'
-import { releaseLayerImageCommand } from './commands/releaseLayerImageCommand'
-import { resetWaitCommand } from './commands/resetWaitCommand'
-import { scenarioExitCommand } from './commands/scenarioExitCommand'
-import { stopSoundEffectCommand } from './commands/stopSoundEffectCommand'
-import { styleCommand } from './commands/styleCommand'
-import { transitionCommand } from './commands/transitionCommand'
-import { waitForClickCommand } from './commands/waitForClickCommand'
-import { waitForTextClickCommand } from './commands/waitForTextClickCommand'
-import { waitForTransitionCommand } from './commands/waitForTransitionCommand.1'
-import { UnknownCommandError } from './errors/UnknownCommandError'
-import { checkIsBlockCommand } from './utils/checkIsBlockCommand'
-import { extractCommand } from './utils/extractCommand'
-import { findClosingBlockCommandIndex } from './utils/findClosingBlockCommandIndex'
-import { findFileInTree } from './utils/findFileInTree'
-import { isComment } from './utils/isComment'
-import { sanitizeLine } from './utils/sanitizeLine'
-import { splitMultiCommandLine } from './utils/splitMultiCommandLine'
-import { clearTextCommand } from './commands/clearTextCommand'
+import { buttonCommand } from '../commands/buttonCommand'
+import { callCommand } from '../commands/callCommand'
+import { changeLayerCountCommand } from '../commands/changeLayerCountCommand'
+import { characterPositionCommand } from '../commands/characterPositionCommand'
+import { clearMessageCommand } from '../commands/clearMessageCommand'
+import { clearTextCommand } from '../commands/clearTextCommand'
+import { copyFrontToBackLayerCommand } from '../commands/copyFrontToBackLayerCommand'
+import { delayCommand } from '../commands/delayCommand'
+import { embeddedTagCommand } from '../commands/embeddedTagCommand'
+import { evalCommand } from '../commands/evalCommand'
+import { historyCommand } from '../commands/historyCommand'
+import { imageCommand } from '../commands/imageCommand'
+import { jumpCommand } from '../commands/jumpCommand'
+import { layerOptionCommand } from '../commands/layerOptionCommand'
+import { loadPluginCommand } from '../commands/loadPluginCommand'
+import { createMacro } from '../commands/macroCommand'
+import { moveCommand } from '../commands/moveCommand'
+import { playSoundEffectCommand } from '../commands/playSoundEffectCommand'
+import { positionCommand } from '../commands/positionCommand'
+import { releaseLayerImageCommand } from '../commands/releaseLayerImageCommand'
+import { resetWaitCommand } from '../commands/resetWaitCommand'
+import { scenarioExitCommand } from '../commands/scenarioExitCommand'
+import { scriptCommand } from '../commands/scriptCommand'
+import { stopSoundEffectCommand } from '../commands/stopSoundEffectCommand'
+import { styleCommand } from '../commands/styleCommand'
+import { transitionCommand } from '../commands/transitionCommand'
+import { waitCommand } from '../commands/waitCommand'
+import { waitForClickCommand } from '../commands/waitForClickCommand'
+import { waitForMovementCommand } from '../commands/waitForMovementCommand'
+import { waitForSoundEffectCommand } from '../commands/waitForSoundEffectCommand'
+import { waitForTextClickCommand } from '../commands/waitForTextClickCommand'
+import { waitForTransitionCommand } from '../commands/waitForTransitionCommand.1'
+import { UnknownCommandError } from '../errors/UnknownCommandError'
+import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
+import { extractCommand } from '../utils/extractCommand'
+import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
+import { findFileInTree } from '../utils/findFileInTree'
+import { isComment } from '../utils/isComment'
+import { sanitizeLine } from '../utils/sanitizeLine'
+import { splitMultiCommandLine } from '../utils/splitMultiCommandLine'
 import { KirikiriRenderer } from './KirikiriRenderer'
 
 export class KirikiriEngine {
@@ -75,7 +76,7 @@ export class KirikiriEngine {
   /**
    * Processed files.
    */
-  processedFiles: Record<string, ProcessedFile> = {}
+  jumpPoints: JumpPoints = {}
 
   /**
    *  History
@@ -104,12 +105,23 @@ export class KirikiriEngine {
   readonly macros: Record<string, (props: Record<string, string>) => Promise<void>> = {}
 
   /**
-   * Last image properties.
+   * Global script context.
    */
-  lastImageProps: Array<{
-    layer: 'base' | number
-    page: 'back' | 'fore'
-  }> = []
+  readonly globalScriptContext = {
+    kag: {
+      bgm: {
+        buf1: {
+          volume2: undefined,
+        },
+      },
+    },
+    sf: {
+      firstclear: undefined,
+    },
+    f: {
+      testmode: undefined,
+    },
+  }
 
   constructor({ container, game, options }: {
     container: HTMLDivElement
@@ -135,12 +147,12 @@ export class KirikiriEngine {
   }
 
   async run() {
-    const content = await this.loadFile(this.game.entry)
+    this.renderer.init()
 
-    const lines = this.splitAndSanitize(content)
+    const lines = await this.loadFile(this.game.entry)
 
-    const processedFile = await this.runLines(lines)
-    this.processedFiles[this.game.entry] = processedFile
+    const jumpPoints = await this.runLines(lines)
+    this.jumpPoints[this.game.entry] = jumpPoints
 
     this.printCommandCallCount()
   }
@@ -148,7 +160,7 @@ export class KirikiriEngine {
   /**
    * Load the file content with the correct encoding.
    */
-  async loadFile(filename: string) {
+  async loadFile(filename: string): Promise<string[]> {
     const foundFiles = findFileInTree(filename, this.game.files, { recursive: true })
 
     if (foundFiles.length === 0) {
@@ -173,7 +185,9 @@ export class KirikiriEngine {
 
     const text = new TextDecoder('shift-jis').decode(arrayBuffer)
 
-    return text
+    const lines = this.splitAndSanitize(text)
+
+    return lines
   }
 
   getFullFilePath(filename: string) {
@@ -206,13 +220,8 @@ export class KirikiriEngine {
   /**
    * Execute the lines.
    */
-  async runLines(lines: string[]): Promise<ProcessedFile> {
-    const processedFile: ProcessedFile = {
-      jumpPoints: [],
-      commands: [],
-    }
-
-    let index = 0
+  async runLines(lines: string[], index = 0): Promise<Record<string, number>> {
+    const jumpPoints: Record<string, number> = {}
 
     do {
       const line = lines[index]
@@ -228,10 +237,7 @@ export class KirikiriEngine {
               throw new Error(`Invalid jump point line: ${line}`)
             }
 
-            processedFile.jumpPoints.push({
-              name: match[1],
-              index,
-            })
+            jumpPoints[match[1]] = index
 
             index += 1
             break
@@ -244,7 +250,8 @@ export class KirikiriEngine {
 
             if (this.macros[command]) {
               const macro = this.macros[command]
-              processedFile.commands.push(macro)
+
+              await macro(props)
 
               index += 1
               break
@@ -272,6 +279,11 @@ export class KirikiriEngine {
 
                   break
                 }
+                case 'iscript': {
+                  await scriptCommand(this, blockLines, props)
+
+                  break
+                }
                 case 'link': {
                   // todo
                   break
@@ -288,8 +300,6 @@ export class KirikiriEngine {
             else {
               try {
                 const commandFunction = this.getCommand(command)
-                const callback = (props: Record<string, string>): Promise<void> => commandFunction(this, props)
-                processedFile.commands.push(callback)
 
                 await commandFunction(this, props)
               }
@@ -331,8 +341,12 @@ export class KirikiriEngine {
       }
     } while (index < lines.length)
 
-    return processedFile
+    return jumpPoints
   }
+
+  /**
+   *
+   */
 
   /**
    * Adds a command to the call count or increments it if it already exists.

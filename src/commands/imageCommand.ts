@@ -1,4 +1,4 @@
-import type { KirikiriEngine } from '../KirikiriEngine'
+import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 import { createBooleanSchema, createGammaSchema, createIntegerSchema } from '../schemas/zod'
 
@@ -39,4 +39,14 @@ export async function imageCommand(engine: KirikiriEngine, props?: Record<string
   if (!file) {
     throw new Error(`File ${parsed.storage}.png not found in game files`)
   }
+
+  await engine.renderer.setImage({
+    file,
+    layer: parsed.layer,
+    page: parsed.page ?? 'back',
+    opacity: parsed.opacity,
+    x: parsed.left,
+    y: parsed.top,
+    visible: parsed.visible,
+  })
 }

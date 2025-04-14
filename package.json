@@ -30,13 +30,15 @@
     "lint": "eslint .",
     "test": "CI=0 FORCE_COLOR=1 vitest --watch --coverage --disableConsoleIntercept --silent false"
   },
-  "peerDependencies": {},
   "dependencies": {
     "commander": "^13.1.0",
-    "consola": "^3.4.2"
+    "consola": "^3.4.2",
+    "pixi.js": "^8.9.1",
+    "ses": "^1.12.0"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.12.0",
+    "@types/fabric": "^5.3.10",
     "@types/node": "^22.14.1",
     "@vitest/coverage-istanbul": "^3.1.1",
     "dotenv": "^16.5.0",

@@ -1,4 +1,4 @@
-import type { KirikiriEngine } from '../KirikiriEngine'
+import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -18,4 +18,6 @@ const schema = z.object({
 
 export async function transitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
+
+  engine.renderer.transition('')
 }

@@ -41,8 +41,8 @@ describe('findClosingBlockCommandIndex', () => {
     expect(() => findClosingBlockCommandIndex('mock', 3, lines)).toThrowError()
   })
 
-  it('should find the index if the command block is empty', () => {
-    const result = findClosingBlockCommandIndex('iscript', 0, ['[iscript]', '[endscript]'])
-    expect(result).toBe(1)
+  it('should find the closing block command of a script', () => {
+    const result = findClosingBlockCommandIndex('iscript', 0, ['[iscript]', 'hello world', '', '[endscript]'])
+    expect(result).toBe(3)
   })
 })

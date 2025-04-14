@@ -1,14 +1,15 @@
 /**
- * Sanitize a line. Removes leading and trailing whitespaces and trailing backslashes.
+ * Sanitize a line.
+ *
+ * - Remove leading and trailing whitespace
+ * - Convert tabs to spaces
  */
 export function sanitizeLine(line: string): string {
   // Remove leading and trailing whitespace
   line = line.trim()
 
-  // Remove trailing backslashes
-  if (line.endsWith('\\')) {
-    line = line.slice(0, -1)
-  }
+  // Convert tabs to spaces
+  line = line.replace(/\t/g, ' ')
 
   return line
 }

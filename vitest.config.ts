@@ -12,7 +12,7 @@ export default defineConfig({
     },
     globals: true,
     environment: 'jsdom',
-    setupFiles: ['__mocks__/konva.ts'],
+    setupFiles: [],
     passWithNoTests: true,
     pool: 'forks',
   },

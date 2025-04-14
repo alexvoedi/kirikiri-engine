@@ -20,15 +20,25 @@ describe('splitMultiCommandLine', () => {
     expect(result).toEqual(['[jump target=*start]'])
   })
 
-  it('should return an empty array if no commands are present', () => {
-    const line = 'This is a plain text line with no commands.'
+  it('should return the line if there are no commands', () => {
+    const line = 'if( sf.d1_s==void )	sf.d1_s=0;	// test'
     const result = splitMultiCommandLine(line)
-    expect(result).toEqual([])
+    expect(result).toEqual([line])
   })
 
   it('should handle an empty string', () => {
     const line = ''
     const result = splitMultiCommandLine(line)
     expect(result).toEqual([])
+  })
+
+  it('should work with scripts', () => {
+    const line = '[iscript]print("Hello, World!")[endscript]'
+    const result = splitMultiCommandLine(line)
+    expect(result).toEqual([
+      '[iscript]',
+      'print("Hello, World!")',
+      '[endscript]',
+    ])
   })
 })
