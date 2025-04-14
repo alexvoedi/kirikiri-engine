@@ -1,3 +1,4 @@
+import type Konva from 'konva'
 import type { KirikiriEngine } from '../KirikiriEngine'
 import { z } from 'zod'
 
@@ -23,6 +24,30 @@ export function createTransitionCommand(engine: KirikiriEngine, defaultProps?: R
       ...props,
     })
 
-    // todo
+    const to = engine.lastImageProps[1]
+
+    const from = engine.lastImageProps.find((imageProps, index) => index !== 0 && imageProps.layer === to.layer)
+
+    if (!from) {
+      throw new Error(`No image found for layer ${to.layer}`)
+    }
+
+    if (from.layer === 'base') {
+      const result = engine.layers.background.getChildren().find((child): child is Konva.Group => child.name() === from.layer.toString())
+    }
+    else {
+      const layer = engine.layers.foreground.getChildren().find((child): child is Konva.Group => child.name() === from.layer.toString())
+
+      if (!layer) {
+        throw new Error(`Layer ${from.layer} not found`)
+      }
+
+      console.log(engine.lastImageProps)
+
+      const fromLayer = from.page === 'back' ? layer.children[0] : layer.children[1]
+      const toLayer = to.page === 'back' ? layer.children[0] : layer.children[1]
+
+      console.log(fromLayer.name(), toLayer.name())
+    }
   }
 }

@@ -65,9 +65,31 @@ export class KirikiriEngine {
   private states: State[] = []
 
   /**
+   * Counts how often a command was called.
+   */
+  readonly commandCallCount: Record<string, number> = {}
+
+  /**
    * All available macros.
    */
   readonly macros: Record<string, (props: Record<string, string>) => Promise<void>> = {}
+
+  /**
+   * Layers
+   */
+  readonly layers: {
+    background: Konva.Layer
+    foreground: Konva.Layer
+    message: Konva.Layer
+  }
+
+  /**
+   * Last image properties.
+   */
+  lastImageProps: Array<{
+    layer: 'base' | number
+    page: 'back' | 'fore'
+  }> = []
 
   constructor({ container, game, options }: {
     container: HTMLDivElement
@@ -85,6 +107,28 @@ export class KirikiriEngine {
       width: container.offsetWidth,
       height: container.offsetHeight,
     })
+
+    const background = new Konva.Layer({
+      name: 'background',
+    })
+
+    this.stage.add(background)
+
+    const foreground = new Konva.Layer({
+      name: 'foreground',
+    })
+
+    this.stage.add(foreground)
+
+    const message = new Konva.Layer({
+      name: 'message',
+    })
+
+    this.layers = {
+      background,
+      foreground,
+      message,
+    }
 
     this.logger = createConsola({
       fancy: true,
@@ -116,6 +160,8 @@ export class KirikiriEngine {
     const lines = this.splitAndSanitize(content)
 
     await this.processLines(lines)
+
+    this.printCommandCallCount()
   }
 
   /**
@@ -219,6 +265,8 @@ export class KirikiriEngine {
           case '[': {
             const { command, props } = extractCommand(line)
 
+            this.updateCommandCallCount(command)
+
             if (this.macros[command]) {
               const macro = this.macros[command]
 
@@ -313,5 +361,30 @@ export class KirikiriEngine {
     } while (index < lines.length)
 
     return processedLines
+  }
+
+  /**
+   * Adds a command to the call count or increments it if it already exists.
+   */
+  private updateCommandCallCount(command: string) {
+    if (!this.commandCallCount[command]) {
+      this.commandCallCount[command] = 0
+    }
+
+    this.commandCallCount[command] += 1
+  }
+
+  /**
+   * Prints the command call count to the console.
+   */
+  private printCommandCallCount() {
+    const sortedCommandCallCount = Object.entries(this.commandCallCount)
+      .sort((a, b) => b[1] - a[1])
+
+    this.logger.info('Command call count:')
+
+    sortedCommandCallCount.forEach(([command, count]) => {
+      this.logger.debug(`${command}: ${count}`)
+    })
   }
 }

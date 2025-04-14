@@ -26,7 +26,7 @@ describe('createImageCommand', () => {
   })
 
   it('should run the command without errors', async () => {
-    const defaultProps = { storage: 'album', layer: 'background' }
+    const defaultProps = { storage: 'album', layer: 'base' }
     const props = { visible: 'true', index: '1', left: '100' }
 
     const command = createImageCommand(engine, defaultProps)

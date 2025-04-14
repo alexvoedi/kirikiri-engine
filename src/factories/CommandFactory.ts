@@ -1,9 +1,13 @@
 import type { KirikiriEngine } from '../KirikiriEngine'
 import { createButtonCommand } from '../commands/createButtonCommand'
 import { createCallCommand } from '../commands/createCallCommand'
+import { createChangeLayerCountCommand } from '../commands/createChangeLayerCountCommand'
+import { createCharacterPositionCommand } from '../commands/createCharacterPositionCommand'
+import { createClearMessageCommand } from '../commands/createClearMessageCommand'
 import { createClearTextCommand } from '../commands/createClearTextCommand'
 import { createCopyFrontToBackLayerCommand } from '../commands/createCopyFrontToBackLayerCommand'
 import { createDelayCommand } from '../commands/createDelayCommand'
+import { createEmbeddedTagCommand } from '../commands/createEmbeddedTagCommand'
 import { createEvalCommand } from '../commands/createEvalCommand'
 import { createHistoryCommand } from '../commands/createHistoryCommand'
 import { createImageCommand } from '../commands/createImageCommand'
@@ -13,6 +17,7 @@ import { createLayerOptionCommand } from '../commands/createLayerOptionCommand'
 import { createLoadPluginCommand } from '../commands/createLoadPluginCommand'
 import { createPlaySoundEffectCommand } from '../commands/createPlaySoundEffectCommand'
 import { createPositionCommand } from '../commands/createPositionCommand'
+import { createReleaseLayerImageCommand } from '../commands/createReleaseLayerImageCommand'
 import { createResetWaitCommand } from '../commands/createResetWaitCommand'
 import { createScenarioExitCommand } from '../commands/createScenarioExitCommand'
 import { createStopSoundEffectCommand } from '../commands/createStopSoundEffectCommand'
@@ -103,6 +108,29 @@ export const CommandFactory = {
       }
       case 'button': {
         return createButtonCommand(engine, props)
+      }
+      case 'emb': {
+        return createEmbeddedTagCommand(engine, props)
+      }
+      case 'fgzoom': {
+        // TODO: find out what this does
+        return async () => { }
+      }
+      case 'wfgzoom': {
+        // TODO: find out what this does
+        return async () => { }
+      }
+      case 'cm': {
+        return createClearMessageCommand(engine, props)
+      }
+      case 'laycount': {
+        return createChangeLayerCountCommand(engine, props)
+      }
+      case 'locate': {
+        return createCharacterPositionCommand(engine, props)
+      }
+      case 'freeimage': {
+        return createReleaseLayerImageCommand(engine, props)
       }
     }
 
