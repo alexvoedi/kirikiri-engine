@@ -54,6 +54,6 @@ describe('kirikiriEngine', () => {
 
     const lines = engine.splitAndSanitize(content)
 
-    expect(() => engine.processLines(lines)).not.toThrow()
+    expect(() => engine.runLines(lines)).not.toThrow()
   })
 })

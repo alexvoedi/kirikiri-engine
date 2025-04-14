@@ -255,146 +255,6 @@ export class KirikiriEngine {
   }
 
   /**
-   * Process lines of the script.
-   */
-  async processLines(lines: string[]) {
-    const processedLines: {
-      jumpPoints: Array<{ name: string, index: number }>
-      commands: Array<
-        (props: Record<string, string>) => Promise<void>
-      >
-      placeholders: Record<number, Record<string, string>>
-    } = {
-      jumpPoints: [],
-      commands: [],
-      placeholders: {},
-    }
-
-    let index = 0
-
-    do {
-      const line = lines[index]
-
-      const firstCharacter = line.charAt(0)
-
-      try {
-        switch (firstCharacter) {
-          case '*': {
-            const match = line.match(/^\*(.+)/)
-
-            if (!match) {
-              throw new Error(`Invalid jump point line: ${line}`)
-            }
-
-            processedLines.jumpPoints.push({
-              name: match[1],
-              index,
-            })
-            index += 1
-            break
-          }
-
-          case '[': {
-            const { command, props } = extractCommand(line)
-
-            this.updateCommandCallCount(command)
-
-            if (this.macros[command]) {
-              const macro = this.macros[command]
-
-              await macro(props)
-
-              index += 1
-              break
-            }
-
-            const isBlockCommand = checkIsBlockCommand(command)
-            if (isBlockCommand) {
-              const closingIndex = findClosingBlockCommandIndex(command, index, lines)
-
-              if (closingIndex === -1) {
-                throw new Error(`Missing closing block command for ${command} at line ${index + 1}`)
-              }
-
-              // Get the lines between the opening and closing block command
-              const blockLines = lines.slice(index + 1, closingIndex)
-
-              switch (command) {
-                case 'macro': {
-                  const { macro, name } = await createMacro(this, {
-                    ...props,
-                    lines: blockLines,
-                  })
-
-                  this.macros[name] = macro
-
-                  break
-                }
-                case 'link': {
-                  // todo
-                  break
-                }
-                case 'if': {
-                  // todo
-                  break
-                }
-              }
-
-              index = closingIndex + 1
-              break
-            }
-            else {
-              try {
-                const commandFunction = this.getCommand(command)
-                const callback = (props: Record<string, string>): Promise<void> => commandFunction(this, props)
-                processedLines.commands.push(callback)
-
-                const placeholders = getPlacholders(line)
-
-                processedLines.placeholders[index] = placeholders
-              }
-              catch (error) {
-                if (error instanceof UnknownCommandError) {
-                  this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
-                }
-                else {
-                  this.logger.error(`Error processing command: ${command} at line ${index + 1}`, error)
-                }
-              }
-
-              index += 1
-              break
-            }
-          }
-
-          case '@': {
-            index += 1
-            break
-          }
-
-          default: {
-            index += 1
-            break
-          }
-        }
-      }
-      catch (error) {
-        if (error instanceof ZodError) {
-          error.issues.forEach((issue) => {
-            if (issue.code === 'unrecognized_keys') {
-              this.logger.error(line, error)
-            }
-          })
-        }
-
-        index += 1
-      }
-    } while (index < lines.length)
-
-    return processedLines
-  }
-
-  /**
    * Execute the lines.
    */
   async runLines(lines: string[]): Promise<ProcessedFile> {
@@ -437,8 +297,6 @@ export class KirikiriEngine {
               const macro = this.macros[command]
               processedFile.commands.push(macro)
 
-              await macro(props)
-
               index += 1
               break
             }
@@ -456,7 +314,7 @@ export class KirikiriEngine {
 
               switch (command) {
                 case 'macro': {
-                  const { macro, name } = await createMacro(this, {
+                  const { macro, name } = createMacro(this, {
                     ...props,
                     lines: blockLines,
                   })
@@ -552,7 +410,7 @@ export class KirikiriEngine {
     })
   }
 
-  private getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {
+  getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {
     switch (command) {
       case 'image': {
         return imageCommand
