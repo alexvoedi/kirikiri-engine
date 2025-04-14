@@ -2,40 +2,40 @@ import type { ConsolaInstance } from 'consola'
 import type { State } from './enums/State'
 import type { Game } from './types/Game'
 import type { KirikiriEngineOptions } from './types/KirikiriEngineOptions'
+import type { ProcessedFile } from './types/ProcessedFile'
 import { createConsola } from 'consola'
 import Konva from 'konva'
 import { ZodError } from 'zod'
-import { createButtonCommand } from './commands/createButtonCommand'
-import { createCallCommand } from './commands/createCallCommand'
-import { createChangeLayerCountCommand } from './commands/createChangeLayerCountCommand'
-import { createCharacterPositionCommand } from './commands/createCharacterPositionCommand'
-import { createClearMessageCommand } from './commands/createClearMessageCommand'
-import { createClearTextCommand } from './commands/createClearTextCommand'
-import { createCopyFrontToBackLayerCommand } from './commands/createCopyFrontToBackLayerCommand'
-import { createDelayCommand } from './commands/createDelayCommand'
-import { createEmbeddedTagCommand } from './commands/createEmbeddedTagCommand'
-import { createEvalCommand } from './commands/createEvalCommand'
-import { createHistoryCommand } from './commands/createHistoryCommand'
-import { createImageCommand } from './commands/createImageCommand'
-import { createJumpCommand } from './commands/createJumpCommand'
-import { createLayerMoveCommand } from './commands/createLayerMoveCommand'
-import { createLayerOptionCommand } from './commands/createLayerOptionCommand'
-import { createLoadPluginCommand } from './commands/createLoadPluginCommand'
-import { createMacro } from './commands/createMacro'
-import { createPlaySoundEffectCommand } from './commands/createPlaySoundEffectCommand'
-import { createPositionCommand } from './commands/createPositionCommand'
-import { createReleaseLayerImageCommand } from './commands/createReleaseLayerImageCommand'
-import { createResetWaitCommand } from './commands/createResetWaitCommand'
-import { createScenarioExitCommand } from './commands/createScenarioExitCommand'
-import { createStopSoundEffectCommand } from './commands/createStopSoundEffectCommand'
-import { createStyleCommand } from './commands/createStyleCommand'
-import { createTextWaitForClickCommand } from './commands/createTextWaitForClickCommand'
-import { createTransitionCommand } from './commands/createTransitionCommand'
-import { createWaitClickCommand } from './commands/createWaitClickCommand'
-import { createWaitCommand } from './commands/createWaitCommand'
-import { createWaitForMovementCommand } from './commands/createWaitForMovementCommand'
-import { createWaitForSoundEffectCommand } from './commands/createWaitForSoundEffectCommand'
-import { createWaitTransitionCommand } from './commands/createWaitTransitionCommand'
+import { buttonCommand } from './commands/buttonCommand'
+import { callCommand } from './commands/callCommand'
+import { changeLayerCountCommand } from './commands/changeLayerCountCommand'
+import { characterPositionCommand } from './commands/characterPositionCommand'
+import { clearMessageCommand } from './commands/clearMessageCommand'
+import { copyFrontToBackLayerCommand } from './commands/copyFrontToBackLayerCommand'
+import { waitCommand } from './commands/waitCommand'
+import { waitForMovementCommand } from './commands/waitForMovementCommand'
+import { waitForSoundEffectCommand } from './commands/waitForSoundEffectCommand'
+import { delayCommand } from './commands/delayCommand'
+import { embeddedTagCommand } from './commands/embeddedTagCommand'
+import { evalCommand } from './commands/evalCommand'
+import { historyCommand } from './commands/historyCommand'
+import { imageCommand } from './commands/imageCommand'
+import { jumpCommand } from './commands/jumpCommand'
+import { layerOptionCommand } from './commands/layerOptionCommand'
+import { loadPluginCommand } from './commands/loadPluginCommand'
+import { createMacro } from './commands/macroCommand'
+import { moveCommand } from './commands/moveCommand'
+import { playSoundEffectCommand } from './commands/playSoundEffectCommand'
+import { positionCommand } from './commands/positionCommand'
+import { releaseLayerImageCommand } from './commands/releaseLayerImageCommand'
+import { resetWaitCommand } from './commands/resetWaitCommand'
+import { scenarioExitCommand } from './commands/scenarioExitCommand'
+import { stopSoundEffectCommand } from './commands/stopSoundEffectCommand'
+import { styleCommand } from './commands/styleCommand'
+import { transitionCommand } from './commands/transitionCommand'
+import { waitForClickCommand } from './commands/waitForClickCommand'
+import { waitForTextClickCommand } from './commands/waitForTextClickCommand'
+import { waitForTransitionCommand } from './commands/waitForTransitionCommand.1'
 import { UnknownCommandError } from './errors/UnknownCommandError'
 import { checkIsBlockCommand } from './utils/checkIsBlockCommand'
 import { extractCommand } from './utils/extractCommand'
@@ -45,6 +45,7 @@ import { getPlacholders } from './utils/getPlaceholders'
 import { isComment } from './utils/isComment'
 import { sanitizeLine } from './utils/sanitizeLine'
 import { splitMultiCommandLine } from './utils/splitMultiCommandLine'
+import { clearTextCommand } from './commands/clearTextCommand'
 
 export class KirikiriEngine {
   /**
@@ -73,9 +74,9 @@ export class KirikiriEngine {
   private readonly unprocessedFiles: string[] = []
 
   /**
-   * List of files that were processed.
+   * Processed files.
    */
-  private readonly processdFiles: Record<string, unknown> = {}
+  processedFiles: Record<string, ProcessedFile> = {}
 
   /**
    *  History
@@ -186,9 +187,11 @@ export class KirikiriEngine {
 
   async run() {
     const content = await this.loadFile(this.game.entry)
+
     const lines = this.splitAndSanitize(content)
 
-    await this.processLines(lines)
+    const processedFile = await this.runLines(lines)
+    this.processedFiles[this.game.entry] = processedFile
 
     this.printCommandCallCount()
   }
@@ -342,8 +345,9 @@ export class KirikiriEngine {
             }
             else {
               try {
-                const commandFunction = this.create(command, props, this)
-                processedLines.commands.push(commandFunction)
+                const commandFunction = this.getCommand(command)
+                const callback = (props: Record<string, string>): Promise<void> => commandFunction(this, props)
+                processedLines.commands.push(callback)
 
                 const placeholders = getPlacholders(line)
 
@@ -391,6 +395,139 @@ export class KirikiriEngine {
   }
 
   /**
+   * Execute the lines.
+   */
+  async runLines(lines: string[]): Promise<ProcessedFile> {
+    const processedFile: ProcessedFile = {
+      jumpPoints: [],
+      commands: [],
+    }
+
+    let index = 0
+
+    do {
+      const line = lines[index]
+
+      const firstCharacter = line.charAt(0)
+
+      try {
+        switch (firstCharacter) {
+          case '*': {
+            const match = line.match(/^\*(.+)/)
+
+            if (!match) {
+              throw new Error(`Invalid jump point line: ${line}`)
+            }
+
+            processedFile.jumpPoints.push({
+              name: match[1],
+              index,
+            })
+
+            index += 1
+            break
+          }
+
+          case '[': {
+            const { command, props } = extractCommand(line)
+
+            this.updateCommandCallCount(command)
+
+            if (this.macros[command]) {
+              const macro = this.macros[command]
+              processedFile.commands.push(macro)
+
+              await macro(props)
+
+              index += 1
+              break
+            }
+
+            const isBlockCommand = checkIsBlockCommand(command)
+            if (isBlockCommand) {
+              const closingIndex = findClosingBlockCommandIndex(command, index, lines)
+
+              if (closingIndex === -1) {
+                throw new Error(`Missing closing block command for ${command} at line ${index + 1}`)
+              }
+
+              // Get the lines between the opening and closing block command
+              const blockLines = lines.slice(index + 1, closingIndex)
+
+              switch (command) {
+                case 'macro': {
+                  const { macro, name } = await createMacro(this, {
+                    ...props,
+                    lines: blockLines,
+                  })
+
+                  this.macros[name] = macro
+
+                  break
+                }
+                case 'link': {
+                  // todo
+                  break
+                }
+                case 'if': {
+                  // todo
+                  break
+                }
+              }
+
+              index = closingIndex + 1
+              break
+            }
+            else {
+              try {
+                const commandFunction = this.getCommand(command)
+                const callback = (props: Record<string, string>): Promise<void> => commandFunction(this, props)
+                processedFile.commands.push(callback)
+
+                await commandFunction(this, props)
+              }
+              catch (error) {
+                if (error instanceof UnknownCommandError) {
+                  this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+                }
+                else {
+                  this.logger.error(`Error processing command: ${command} at line ${index + 1}`, error)
+                }
+              }
+
+              index += 1
+              break
+            }
+          }
+
+          case '@': {
+            index += 1
+            break
+          }
+
+          default: {
+            index += 1
+            break
+          }
+        }
+      }
+      catch (error) {
+        if (error instanceof ZodError) {
+          error.issues.forEach((issue) => {
+            if (issue.code === 'unrecognized_keys') {
+              this.logger.error(line, error)
+            }
+          })
+        }
+
+        index += 1
+      }
+    } while (index < lines.length)
+
+    return processedFile
+  }
+
+  /**
    * Adds a command to the call count or increments it if it already exists.
    */
   private updateCommandCallCount(command: string) {
@@ -415,85 +552,97 @@ export class KirikiriEngine {
     })
   }
 
-  private create(command: string, props: Record<string, string>, engine: KirikiriEngine): (props?: Record<string, string>) => Promise<void> {
+  private getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {
     switch (command) {
-      case 'wait': {
-        return createWaitCommand(engine, props)
-      }
       case 'image': {
-        return createImageCommand(engine, props)
-      }
-      case 's': {
-        return createScenarioExitCommand(engine, props)
-      }
-      case 'l': {
-        return createTextWaitForClickCommand(engine, props)
-      }
-      case 'call': {
-        return createCallCommand(engine, props)
-      }
-      case 'loadplugin': {
-        return createLoadPluginCommand(engine, props)
-      }
-      case 'history': {
-        return createHistoryCommand(engine, props)
-      }
-      case 'eval': {
-        return createEvalCommand(engine, props)
-      }
-      case 'wt': {
-        return createWaitTransitionCommand(engine, props)
+        return imageCommand
       }
       case 'position': {
-        return createPositionCommand(engine, props)
-      }
-      case 'resetwait': {
-        return createResetWaitCommand(engine, props)
-      }
-      case 'ct': {
-        return createClearTextCommand(engine, props)
-      }
-      case 'stopse': {
-        return createStopSoundEffectCommand(engine, props)
-      }
-      case 'style': {
-        return createStyleCommand(engine, props)
-      }
-      case 'waitclick': {
-        return createWaitClickCommand(engine, props)
-      }
-      case 'delay': {
-        return createDelayCommand(engine, props)
-      }
-      case 'jump': {
-        return createJumpCommand(engine, props)
+        return positionCommand
       }
       case 'trans': {
-        return createTransitionCommand(engine, props)
+        return transitionCommand
       }
-      case 'ws': {
-        return createWaitForSoundEffectCommand(engine, props)
+      case 'wt': {
+        return waitForTransitionCommand
       }
-      case 'layopt': {
-        return createLayerOptionCommand(engine, props)
+      case 'ct': {
+        return clearTextCommand
       }
-      case 'move': {
-        return createLayerMoveCommand(engine, props)
+      case 'jump': {
+        return jumpCommand
       }
-      case 'wm': {
-        return createWaitForMovementCommand(engine, props)
+      case 'eval': {
+        return evalCommand
       }
-      case 'backlay': {
-        return createCopyFrontToBackLayerCommand(engine, props)
+      case 'wait': {
+        return waitCommand
       }
       case 'playse': {
-        return createPlaySoundEffectCommand(engine, props)
+        return playSoundEffectCommand
+      }
+      case 'ws': {
+        return waitForSoundEffectCommand
+      }
+      case 'l': {
+        return waitForTextClickCommand
+      }
+      case 'move': {
+        return moveCommand
+      }
+      case 'cm': {
+        return clearMessageCommand
+      }
+      case 'waitclick': {
+        return waitForClickCommand
+      }
+      case 'stopse': {
+        return stopSoundEffectCommand
+      }
+      case 'wm': {
+        return waitForMovementCommand
+      }
+      case 'style': {
+        return styleCommand
+      }
+      case 'delay': {
+        return delayCommand
+      }
+      case 'history': {
+        return historyCommand
       }
       case 'button': {
-        return createButtonCommand(engine, props)
+        return buttonCommand
+      }
+      case 's': {
+        return scenarioExitCommand
+      }
+      case 'freeimage': {
+        return releaseLayerImageCommand
+      }
+      case 'layopt': {
+        return layerOptionCommand
+      }
+      case 'backlay': {
+        return copyFrontToBackLayerCommand
+      }
+      case 'resetwait': {
+        return resetWaitCommand
       }
       case 'emb': {
-        return createEmbeddedTagCommand(engine, props)
+        return embeddedTagCommand
+      }
+      case 'locate': {
+        return characterPositionCommand
+      }
+      case 'laycount': {
+        return changeLayerCountCommand
+      }
+      case 'call': {
+        return callCommand
+      }
+      case 'loadplugin': {
+        return loadPluginCommand
       }
       case 'fgzoom': {
         // TODO: find out what this does
@@ -502,18 +651,6 @@ export class KirikiriEngine {
       case 'wfgzoom': {
         // TODO: find out what this does
         return async () => { }
-      }
-      case 'cm': {
-        return createClearMessageCommand(engine, props)
-      }
-      case 'laycount': {
-        return createChangeLayerCountCommand(engine, props)
-      }
-      case 'locate': {
-        return createCharacterPositionCommand(engine, props)
-      }
-      case 'freeimage': {
-        return createReleaseLayerImageCommand(engine, props)
       }
     }
 

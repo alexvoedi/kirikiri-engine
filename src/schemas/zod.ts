@@ -39,3 +39,7 @@ export function createFloatSchema(min?: number, max?: number): z.ZodSchema<numbe
 export function createGammaSchema() {
   return createFloatSchema(0.1, 9.9).transform(v => scaleRange(v, 0.1, 9.9, 0, 255))
 }
+
+export function createPageSchema() {
+  return z.enum(['fore', 'fore'])
+}
