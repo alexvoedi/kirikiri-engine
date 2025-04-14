@@ -1,10 +1,9 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { createFloatSchema } from '../schemas/zod'
 
 const schema = z.object({
-  time: z.string()
-    .transform(value => Number.parseFloat(value))
-    .refine(value => !Number.isNaN(value), value => ({ message: `Invalid number for 'time': ${value}` })),
+  time: createFloatSchema(),
   method: z.enum(['universal', 'scroll', 'crossfade', 'turn', 'rotatezoom']).optional(),
   bgcolor: z.string().optional(),
   factor: z.string()
@@ -17,7 +16,13 @@ const schema = z.object({
 }).strict()
 
 export async function transitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  schema.parse(props)
+  const parsed = schema.parse(props)
 
   engine.renderer.transition('')
+
+  const waitForTransitionNotifier = new CustomEvent('wt')
+
+  setTimeout(() => {
+    window.dispatchEvent(waitForTransitionNotifier)
+  }, parsed.time)
 }

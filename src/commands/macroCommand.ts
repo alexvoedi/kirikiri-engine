@@ -29,7 +29,12 @@ export function createMacro(engine: KirikiriEngine, props: Record<string, unknow
             requiredProps[key] = props[key]
           })
 
-          await command(requiredProps)
+          try {
+            await command(requiredProps)
+          }
+          catch (e) {
+            console.log(e)
+          }
         }
       }
     },
@@ -111,7 +116,7 @@ function processLines(engine: KirikiriEngine, lines: string[]) {
           else {
             try {
               const commandFunction = engine.getCommand(command)
-              const callback = (props: Record<string, string>): Promise<void> => commandFunction(engine, props)
+              const callback = (replacedProps: Record<string, string>): Promise<void> => commandFunction(engine, { ...props, ...replacedProps })
               processedLines.commands.push(callback)
 
               const placeholders = getPlacholders(line)

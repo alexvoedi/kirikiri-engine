@@ -17,6 +17,18 @@ export class KirikiriRenderer {
     })
 
     this.container.appendChild(this.app.canvas)
+
+    const baseLayer = new KirikiriLayer(this.app.stage, 'base')
+    this.app.stage.addChildAt(baseLayer, 0)
+    this.layers.base = baseLayer
+
+    const frontLayer = new KirikiriLayer(this.app.stage, 'front')
+    this.app.stage.addChildAt(frontLayer, 1)
+    this.layers.front = frontLayer
+
+    const messageLayer = new KirikiriLayer(this.app.stage, 'message0')
+    this.app.stage.addChildAt(messageLayer, 2)
+    this.layers.message = messageLayer
   }
 
   async setImage(data: {
@@ -49,10 +61,12 @@ export class KirikiriRenderer {
       this.layers[layer] = new KirikiriLayer(this.app.stage, layer)
 
       if (typeof layer === 'string') {
-        this.app.stage.addChildAt(this.layers[layer], 0)
+        if (layer.startsWith('message')) {
+          this.layers.message.addChildAt(this.layers[layer], 0)
+        }
       }
       else {
-        this.app.stage.addChildAt(this.layers[layer], layer + 1)
+        this.layers.front.addChildAt(this.layers[layer], 0)
       }
     }
 
@@ -69,5 +83,63 @@ export class KirikiriRenderer {
     for (const layer of layers) {
       layer.transition(name)
     }
+  }
+
+  setPosition(data: {
+    layer?: string | number
+    page?: 'back' | 'fore'
+    left?: number
+    top?: number
+    width?: number
+    height?: number
+    visible?: boolean
+    frame?: string
+    opacity?: number
+  }) {
+    const {
+      layer = 'message0',
+      page = 'fore',
+      left = 0,
+      top = 0,
+      width = 0,
+      height = 0,
+      visible = true,
+      frame = '',
+      opacity = 1,
+    } = data
+
+    const layerGroup = this.getOrCreateLayer(layer)
+
+    layerGroup.setPosition({
+      page,
+      left,
+      top,
+      width,
+      height,
+      visible,
+      frame,
+      opacity,
+    })
+  }
+
+  setLayerOptions(data: {
+    layer: string | number
+    page: 'back' | 'fore'
+    visible?: boolean
+    autohide?: boolean
+    index?: number
+  }) {
+    const { layer, page, visible = true, autohide = false, index } = data
+
+    const layerGroup = this.getOrCreateLayer(layer)
+
+    console.log(data, layerGroup)
+
+    layerGroup.setLayerOptions({
+      page,
+      visible,
+      autohide,
+      index,
+    })
   }
 }

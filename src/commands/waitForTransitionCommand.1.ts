@@ -6,5 +6,14 @@ const schema = z.object({
 })
 
 export async function waitForTransitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  schema.parse(props)
+  const parsed = schema.parse(props)
+
+  return new Promise((resolve) => {
+    const handleTransitionEnded = () => {
+      window.removeEventListener('wt', handleTransitionEnded)
+      resolve()
+    }
+
+    window.addEventListener('wt', handleTransitionEnded)
+  })
 }

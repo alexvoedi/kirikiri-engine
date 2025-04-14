@@ -1,14 +1,17 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { createAlphanumericSchema, createBooleanSchema, createIntegerSchema } from '../schemas/zod'
 
 const schema = z.object({
-  layer: z.string(),
+  layer: createAlphanumericSchema(),
   page: z.enum(['fore', 'back']),
-  visible: z.string().transform(value => value === 'true').optional(),
-  autohide: z.string().transform(value => value === 'true').optional(),
-  index: z.string().transform(value => Number.parseInt(value, 10)).optional(),
+  visible: createBooleanSchema().optional(),
+  autohide: createBooleanSchema().optional(),
+  index: createIntegerSchema(0).optional(),
 }).strict()
 
 export async function layerOptionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  schema.parse(props)
+  const parsed = schema.parse(props)
+
+  engine.renderer.setLayerOptions(parsed)
 }

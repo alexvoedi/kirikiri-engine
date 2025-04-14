@@ -1,5 +1,4 @@
 import type { ConsolaInstance } from 'consola'
-import type { State } from '../enums/State'
 import type { Game } from '../types/Game'
 import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
 import { createConsola } from 'consola'
@@ -189,7 +188,6 @@ export class KirikiriEngine {
   }
 
   getFullFilePath(filename: string) {
-    console.log(filename)
     const foundFiles = findFileInTree(filename, this.game.files, { recursive: true })
 
     if (foundFiles.length === 0) {
@@ -258,9 +256,9 @@ export class KirikiriEngine {
     do {
       const line = lines[index]
 
-      const firstCharacter = line.charAt(0)
+      // console.log(line)
 
-      console.log(line)
+      const firstCharacter = line.charAt(0)
 
       try {
         switch (firstCharacter) {
