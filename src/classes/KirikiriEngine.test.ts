@@ -35,7 +35,7 @@ describe('kirikiriEngine', () => {
     expect(lines).toBeDefined()
     expect(lines[0].startsWith('[wait time=100]')).toBe(true)
 
-    expect(lines.some((line) => line.includes('シナリオ'))).toBe(true)
+    expect(lines.some(line => line.includes('シナリオ'))).toBe(true)
   })
 
   it('can process lines without throwing an error', async () => {

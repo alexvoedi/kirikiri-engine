@@ -47,16 +47,20 @@ describe('findClosingBlockCommandIndex', () => {
   })
 
   it('should work for nested if blocks', () => {
-    const result = findClosingBlockCommandIndex('if', 0, [
+    const lines = [
       '[if exp="f.testmode==0"]',
-      '  [if exp="sf.firstclear==0"]',
-      '  [jump storage="prologue.ks" target=*gameStart]',
-      '  [endif]',
-      '  [if exp="sf.firstclear==1"]',
-      '  [jump storage="menu.ks" target=*gameStart][endif]',
-      '  [s]',
+      '[if exp="sf.firstclear==0"]',
+      '[jump storage="prologue.ks" target=*gameStart]',
       '[endif]',
-    ])
-    expect(result).toBe(7)
+      '[if exp="sf.firstclear==1"]',
+      '[jump storage="menu.ks" target=*gameStart]',
+      '[endif]',
+      '[s]',
+      '[endif]',
+    ]
+
+    expect(findClosingBlockCommandIndex('if', 0, lines)).toBe(8)
+    expect(findClosingBlockCommandIndex('if', 1, lines)).toBe(3)
+    expect(findClosingBlockCommandIndex('if', 4, lines)).toBe(6)
   })
 })

@@ -38,6 +38,7 @@ import { waitForMovementCommand } from '../commands/waitForMovementCommand'
 import { waitForSoundEffectCommand } from '../commands/waitForSoundEffectCommand'
 import { waitForTextClickCommand } from '../commands/waitForTextClickCommand'
 import { waitForTransitionCommand } from '../commands/waitForTransitionCommand.1'
+import { COMMAND_BLOCKS } from '../constants'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
@@ -148,9 +149,8 @@ export class KirikiriEngine {
 
     const lines = await this.loadFile(this.game.entry)
 
+    await this.registerAllSubroutines(lines)
     await this.runLines(lines)
-    await this.runSubroutine('start')
-    await this.runSubroutine('alpharom')
 
     // this.printCommandCallCount()
   }
@@ -215,6 +215,41 @@ export class KirikiriEngine {
       .flat()
   }
 
+  async registerAllSubroutines(lines: string[]) {
+    let index = 0
+
+    do {
+      const line = lines[index]
+
+      const firstCharacter = line.charAt(0)
+
+      if (firstCharacter === '*') {
+        const closingIndex = findSubroutineEndIndex(index, lines)
+
+        if (closingIndex === -1) {
+          throw new Error(`Could not find end of subroutine for ${line} at line ${index + 1}`)
+        }
+
+        const match = line.match(/^\*(.+)/) // find the name of the subroutine
+
+        if (!match) {
+          throw new Error(`Invalid jump point line: ${line}`)
+        }
+
+        const subroutineName = match[1].trim()
+
+        // Get the lines of the subroutine
+        const subroutineLines = lines.slice(index + 1, closingIndex)
+
+        this.subroutines[subroutineName] = subroutineLines
+
+        this.logger.info('Registered new subroutine:', subroutineName)
+      }
+
+      index += 1
+    } while (index < lines.length)
+  }
+
   /**
    * Execute the lines.
    */
@@ -226,36 +261,6 @@ export class KirikiriEngine {
 
       try {
         switch (firstCharacter) {
-          case '*': {
-            const closingIndex = findSubroutineEndIndex(index, lines)
-
-            if (closingIndex === -1) {
-              throw new Error(`Could not find end of subroutine for ${line} at line ${index + 1}`)
-            }
-
-            const match = line.match(/^\*(.+)/) // find the name of the subroutine
-
-            if (!match) {
-              throw new Error(`Invalid jump point line: ${line}`)
-            }
-
-            const subroutineName = match[1].trim()
-
-            if (this.subroutines[subroutineName]) {
-              throw new Error(`Subroutine ${subroutineName} already defined at line ${index + 1}`)
-            }
-
-            // Get the lines of the subroutine
-            const subroutineLines = lines.slice(index + 1, closingIndex)
-
-            this.subroutines[subroutineName] = subroutineLines
-
-            this.logger.info('Registered new subroutine:', subroutineName)
-
-            index = closingIndex + 1
-            break
-          }
-
           case '@':
           case '[': {
             const { command, props } = extractCommand(line)
@@ -271,7 +276,6 @@ export class KirikiriEngine {
             }
 
             const isBlockCommand = checkIsBlockCommand(command)
-
             if (isBlockCommand) {
               const closingIndex = findClosingBlockCommandIndex(command, index, lines)
 
@@ -322,6 +326,12 @@ export class KirikiriEngine {
                 await commandFunction(this, props)
               }
               catch (error) {
+                if (Object.values(COMMAND_BLOCKS).includes(command)) {
+                  // ignore this
+                  index += 1
+                  break
+                }
+
                 if (error instanceof UnknownCommandError) {
                   this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
                 }
@@ -350,8 +360,7 @@ export class KirikiriEngine {
           })
         }
         else {
-          console.log(lines)
-          this.logger.error(`Error processing line ${index}: ${line}`, error)
+          this.logger.error(`Error processing line ${index + 1}: ${line}`, error)
         }
 
         index += 1

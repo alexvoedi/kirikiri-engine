@@ -3,35 +3,36 @@
  *
  * A Subroutine starts with *<value> and ends with [s] or [return]
  */
-export function findSubroutineEndIndex(currentIndex: number, lines: string[]) {
+export function findSubroutineEndIndex(openPos: number, lines: string[]) {
   if (lines.length === 0) {
     return -1
   }
 
-  const isSubroutine = lines[currentIndex].startsWith('*')
+  const isSubroutine = lines[openPos].startsWith('*')
 
   if (!isSubroutine) {
     return -1
   }
 
-  let nestedLevel = 0
+  let closePos = openPos
+  let counter = 1
+  while (counter > 0) {
+    closePos++
 
-  for (let i = currentIndex; i < lines.length; i++) {
-    const line = lines[i]
+    if (closePos >= lines.length) {
+      return lines.length - 1
+    }
+
+    const line = lines[closePos]
 
     if (line.startsWith('*')) {
-      nestedLevel += 1
+      counter += 1
     }
 
     if (line.startsWith('[s]') || line.startsWith('[return]')) {
-      nestedLevel -= 1
-    }
-
-    if (nestedLevel === 0) {
-      return i
+      counter -= 1
     }
   }
 
-  // if no end marker is found, the subroutine is considered to be open-ended
-  return lines.length - 1
+  return closePos
 }

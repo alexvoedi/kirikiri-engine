@@ -13,6 +13,7 @@ export async function ifCommand(engine: KirikiriEngine, props?: Record<string, u
   try {
     const result = await checkCondition(engine, parsed.exp)
 
+    console.log(props, result)
     if (result) {
       await engine.runLines(parsed.lines)
     }

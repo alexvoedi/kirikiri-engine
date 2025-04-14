@@ -6,7 +6,7 @@ import { extractCommand } from './extractCommand'
 /**
  * Find the corresponding closing block command index for a given block command.
  */
-export function findClosingBlockCommandIndex(command: string, currentIndex: number, lines: string[]): number {
+export function findClosingBlockCommandIndex(command: string, openPos: number, lines: string[]): number {
   const isBlockCommand = checkIsBlockCommand(command)
 
   if (!isBlockCommand) {
@@ -15,15 +15,20 @@ export function findClosingBlockCommandIndex(command: string, currentIndex: numb
 
   const closingCommandBlock = COMMAND_BLOCKS[command]
 
-  let nestedLevel = 0
+  let closePos = openPos
+  let counter = 1
+  while (counter > 0) {
+    closePos++
 
-  for (let i = currentIndex; i < lines.length; i++) {
-    const line = lines[i]
+    if (closePos >= lines.length) {
+      return -1
+    }
+
+    const line = lines[closePos]
 
     const isCommand = checkIsCommand(line)
 
     if (!isCommand) {
-      // Not a command, skip to the next line
       continue
     }
 
@@ -31,21 +36,14 @@ export function findClosingBlockCommandIndex(command: string, currentIndex: numb
 
     // If the command is the same as the one we are looking for, increase the nested level
     if (extractedCommand === command) {
-      nestedLevel += 1
-      continue
+      counter += 1
     }
 
     // If the command is the closing block command, decrease the nested level
     if (extractedCommand === closingCommandBlock) {
-      nestedLevel -= 1
-    }
-
-    // If the nested level is zero, we found the closing block command
-    if (nestedLevel === 0 && extractedCommand === closingCommandBlock) {
-      return i
+      counter -= 1
     }
   }
 
-  // If no closing block command is found, return -1
-  return -1
+  return closePos
 }

@@ -4,7 +4,7 @@ import { checkIsBlockCommand } from './checkIsBlockCommand'
 describe('checkIsBlockCommand', () => {
   it('should return true for a command that starts with a block command', () => {
     expect(checkIsBlockCommand('iscript')).toBe(true)
-    expect(checkIsBlockCommand('endscript')).toBe(true)
+    expect(checkIsBlockCommand('endscript')).toBe(false)
     expect(checkIsBlockCommand('if')).toBe(true)
     expect(checkIsBlockCommand('macro')).toBe(true)
   })

@@ -5,6 +5,8 @@ import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { getPlacholders } from '../utils/getPlaceholders'
+import { ifCommand } from './ifCommand'
+import { scriptCommand } from './scriptCommand'
 
 const schema = z.object({
   name: z.string(),
@@ -36,15 +38,16 @@ export function createMacro(engine: KirikiriEngine, props: Record<string, unknow
   }
 }
 
+/**
+ * Collects all commands that are called when running the macro.
+ */
 function processLines(engine: KirikiriEngine, lines: string[]) {
   const processedLines: {
-    jumpPoints: Array<{ name: string, index: number }>
     commands: Array<
       (props: Record<string, string>) => Promise<void>
     >
     placeholders: Record<number, Record<string, string>>
   } = {
-    jumpPoints: [],
     commands: [],
     placeholders: {},
   }
@@ -59,7 +62,7 @@ function processLines(engine: KirikiriEngine, lines: string[]) {
     try {
       switch (firstCharacter) {
         case '[': {
-          const { command } = extractCommand(line)
+          const { command, props } = extractCommand(line)
 
           const macro = engine.macros[command]
           if (macro) {
@@ -75,6 +78,33 @@ function processLines(engine: KirikiriEngine, lines: string[]) {
 
             if (closingIndex === -1) {
               throw new Error(`Missing closing block command for ${command} at line ${index + 1}`)
+            }
+
+            // Get the lines between the opening and closing block command
+            const blockLines = lines.slice(index + 1, closingIndex)
+
+            switch (command) {
+              case 'iscript': {
+                const callback = async () => await scriptCommand(engine, blockLines, props)
+
+                processedLines.commands.push(callback)
+
+                break
+              }
+              case 'link': {
+                // todo
+                break
+              }
+              case 'if': {
+                const callback = async () => await ifCommand(engine, {
+                  ...props,
+                  lines: blockLines,
+                })
+
+                processedLines.commands.push(callback)
+
+                break
+              }
             }
 
             index = closingIndex + 1
