@@ -19,15 +19,18 @@ export class KirikiriRenderer {
     this.container.appendChild(this.app.canvas)
 
     const baseLayer = new KirikiriLayer(this.app.stage, 'base')
-    this.app.stage.addChildAt(baseLayer, 0)
+    baseLayer.zIndex = 0
+    this.app.stage.addChild(baseLayer)
     this.layers.base = baseLayer
 
     const frontLayer = new KirikiriLayer(this.app.stage, 'front')
-    this.app.stage.addChildAt(frontLayer, 1)
+    frontLayer.zIndex = 1
+    this.app.stage.addChild(frontLayer)
     this.layers.front = frontLayer
 
     const messageLayer = new KirikiriLayer(this.app.stage, 'message0')
-    this.app.stage.addChildAt(messageLayer, 2)
+    messageLayer.zIndex = 100
+    this.app.stage.addChild(messageLayer)
     this.layers.message = messageLayer
   }
 
@@ -62,11 +65,16 @@ export class KirikiriRenderer {
 
       if (typeof layer === 'string') {
         if (layer.startsWith('message')) {
-          this.layers.message.addChildAt(this.layers[layer], 0)
+          this.layers.message.addChild(this.layers[layer])
         }
       }
       else {
-        this.layers.front.addChildAt(this.layers[layer], 0)
+        if (layer === 3) {
+          this.layers.message.addChild(this.layers[layer])
+        }
+        else {
+          this.layers.front.addChild(this.layers[layer])
+        }
       }
     }
 

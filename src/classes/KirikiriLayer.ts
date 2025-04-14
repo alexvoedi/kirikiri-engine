@@ -11,12 +11,12 @@ export class KirikiriLayer extends Container {
     this.back = new Container({
       label: 'back',
     })
-    stage.addChildAt(this.back, 0)
+    stage.addChild(this.back)
 
     this.fore = new Container({
       label: 'fore',
     })
-    stage.addChildAt(this.fore, 1)
+    stage.addChild(this.fore)
   }
 
   setPage(page: 'back' | 'fore', element: Sprite, options?: {
@@ -25,7 +25,7 @@ export class KirikiriLayer extends Container {
     this[page].removeChildren()
 
     if (page === 'fore') {
-      element.visible = options?.visible ?? false
+      element.visible = options?.visible ?? true
     }
 
     this[page].addChild(element)
