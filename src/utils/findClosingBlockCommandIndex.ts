@@ -21,7 +21,7 @@ export function findClosingBlockCommandIndex(command: string, openPos: number, l
     closePos++
 
     if (closePos >= lines.length) {
-      return -1
+      return lines.length - 1
     }
 
     const line = lines[closePos]

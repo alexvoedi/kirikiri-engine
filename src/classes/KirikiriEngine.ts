@@ -309,7 +309,8 @@ export class KirikiriEngine {
                 case 'if': {
                   await ifCommand(this, {
                     ...props,
-                    lines: blockLines,
+                    index,
+                    lines,
                   })
 
                   break

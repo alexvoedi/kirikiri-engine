@@ -41,5 +41,5 @@ export function createGammaSchema() {
 }
 
 export function createPageSchema() {
-  return z.enum(['fore', 'fore'])
+  return z.enum(['front', 'back'])
 }

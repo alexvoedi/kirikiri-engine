@@ -23,8 +23,6 @@ const schema = z.union([
 export async function jumpCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  console.log(parsed, props)
-
   if ('storage' in parsed && 'target' in parsed) {
     const sanitizedTarget = parsed.target.replace(/^\*/, '')
 
