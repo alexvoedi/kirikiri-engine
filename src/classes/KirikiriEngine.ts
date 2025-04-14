@@ -189,6 +189,7 @@ export class KirikiriEngine {
   }
 
   getFullFilePath(filename: string) {
+    console.log(filename)
     const foundFiles = findFileInTree(filename, this.game.files, { recursive: true })
 
     if (foundFiles.length === 0) {

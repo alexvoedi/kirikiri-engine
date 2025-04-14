@@ -31,10 +31,10 @@ describe('findClosingBlockCommandIndex', () => {
     expect(result3).toBe(5)
   })
 
-  it('should return -1 if no closing block command is found', () => {
+  it('should return the last index if not closing command is found', () => {
     const result = findClosingBlockCommandIndex('iscript', 0, lines)
 
-    expect(result).toBe(-1)
+    expect(result).toBe(10)
   })
 
   it('should throw and error if it is not a block command', () => {

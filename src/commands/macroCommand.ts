@@ -21,19 +21,17 @@ export function createMacro(engine: KirikiriEngine, props: Record<string, unknow
   return {
     name: parsed.name,
     macro: async (props: Record<string, string>): Promise<void> => {
-      await Promise.all(
-        commands.map(async (command, index) => {
-          if (placeholders[index]) {
-            const requiredProps: Record<string, string> = {}
+      for (const [index, command] of commands.entries()) {
+        if (placeholders[index]) {
+          const requiredProps: Record<string, string> = {}
 
-            Object.keys(placeholders[index]).forEach((key) => {
-              requiredProps[key] = props[key]
-            })
+          Object.keys(placeholders[index]).forEach((key) => {
+            requiredProps[key] = props[key]
+          })
 
-            await command(requiredProps)
-          }
-        }),
-      )
+          await command(requiredProps)
+        }
+      }
     },
   }
 }
@@ -76,10 +74,6 @@ function processLines(engine: KirikiriEngine, lines: string[]) {
           if (isBlockCommand) {
             const closingIndex = findClosingBlockCommandIndex(command, index, lines)
 
-            if (closingIndex === -1) {
-              throw new Error(`Missing closing block command for ${command} at line ${index + 1}`)
-            }
-
             // Get the lines between the opening and closing block command
             const blockLines = lines.slice(index + 1, closingIndex)
 
@@ -93,6 +87,10 @@ function processLines(engine: KirikiriEngine, lines: string[]) {
               }
               case 'link': {
                 // todo
+                break
+              }
+              case 'macro': {
+                // todo?
                 break
               }
               case 'if': {
