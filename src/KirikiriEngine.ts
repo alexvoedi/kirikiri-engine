@@ -4,7 +4,6 @@ import type { Game } from './types/Game'
 import type { KirikiriEngineOptions } from './types/KirikiriEngineOptions'
 import type { ProcessedFile } from './types/ProcessedFile'
 import { createConsola } from 'consola'
-import Konva from 'konva'
 import { ZodError } from 'zod'
 import { buttonCommand } from './commands/buttonCommand'
 import { callCommand } from './commands/callCommand'
@@ -41,11 +40,11 @@ import { checkIsBlockCommand } from './utils/checkIsBlockCommand'
 import { extractCommand } from './utils/extractCommand'
 import { findClosingBlockCommandIndex } from './utils/findClosingBlockCommandIndex'
 import { findFileInTree } from './utils/findFileInTree'
-import { getPlacholders } from './utils/getPlaceholders'
 import { isComment } from './utils/isComment'
 import { sanitizeLine } from './utils/sanitizeLine'
 import { splitMultiCommandLine } from './utils/splitMultiCommandLine'
 import { clearTextCommand } from './commands/clearTextCommand'
+import { KirikiriRenderer } from './KirikiriRenderer'
 
 export class KirikiriEngine {
   /**
@@ -59,9 +58,9 @@ export class KirikiriEngine {
   readonly options: KirikiriEngineOptions
 
   /**
-   * Konva stage instance where everything is drawn.
+   * Renderer instance.
    */
-  readonly stage: Konva.Stage
+  readonly renderer: KirikiriRenderer
 
   /**
    * Logger instance.
@@ -105,15 +104,6 @@ export class KirikiriEngine {
   readonly macros: Record<string, (props: Record<string, string>) => Promise<void>> = {}
 
   /**
-   * Layers
-   */
-  readonly layers: {
-    background: Konva.Layer
-    foreground: Konva.Layer
-    message: Konva.Layer
-  }
-
-  /**
    * Last image properties.
    */
   lastImageProps: Array<{
@@ -132,33 +122,7 @@ export class KirikiriEngine {
       loglevel: 0,
     }
 
-    this.stage = new Konva.Stage({
-      container,
-      width: container.offsetWidth,
-      height: container.offsetHeight,
-    })
-
-    const background = new Konva.Layer({
-      name: 'background',
-    })
-
-    this.stage.add(background)
-
-    const foreground = new Konva.Layer({
-      name: 'foreground',
-    })
-
-    this.stage.add(foreground)
-
-    const message = new Konva.Layer({
-      name: 'message',
-    })
-
-    this.layers = {
-      background,
-      foreground,
-      message,
-    }
+    this.renderer = new KirikiriRenderer(container)
 
     this.logger = createConsola({
       fancy: true,
@@ -167,21 +131,6 @@ export class KirikiriEngine {
         colors: true,
         date: true,
       },
-    })
-
-    const initialWidth = container.offsetWidth
-    const initialHeight = container.offsetHeight
-
-    window.addEventListener('resize', () => {
-      container.style.width = '100%'
-
-      const containerWidth = container.offsetWidth
-
-      const scale = containerWidth / initialWidth
-
-      this.stage.width(initialWidth * scale)
-      this.stage.height(initialHeight * scale)
-      this.stage.scale({ x: scale, y: scale })
     })
   }
 

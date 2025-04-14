@@ -30,13 +30,10 @@
     "lint": "eslint .",
     "test": "CI=0 FORCE_COLOR=1 vitest --watch --coverage --disableConsoleIntercept --silent false"
   },
-  "peerDependencies": {
-    "konva": "^9.3.20"
-  },
+  "peerDependencies": {},
   "dependencies": {
     "commander": "^13.1.0",
-    "consola": "^3.4.2",
-    "konva": "^9.3.20"
+    "consola": "^3.4.2"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^4.12.0",

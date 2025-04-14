@@ -9,9 +9,6 @@ export default defineConfig([
     sourcemap: true,
     treeshake: true,
     clean: true,
-    external: [
-      'konva',
-    ],
   },
   {
     entry: ['src/cli.ts'],
