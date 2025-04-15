@@ -8,4 +8,6 @@ const schema = z.object({}).strict()
  */
 export async function waitForTextClickCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
+
+  engine.logger.warn('Unimplemented command', 'waitForTextClickCommand')
 }

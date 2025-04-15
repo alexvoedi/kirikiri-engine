@@ -7,6 +7,12 @@ import { checkIsCommand } from './checkIsCommand'
  * Example: [iscript]print("Hello, World!")[endscript]
  */
 export function splitMultiCommandLine(line: string): string[] {
+  const isCommandLine = line.startsWith('[')
+
+  if (!isCommandLine) {
+    return [line]
+  }
+
   const regex = /(\[[^\]]+\])|([^[\]]+)/g
 
   const lines: string[] = []

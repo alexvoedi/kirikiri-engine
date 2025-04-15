@@ -1,9 +1,15 @@
-import { Application, Assets, Container, Sprite, Texture } from 'pixi.js'
+import { Application, Assets, Sprite, Text } from 'pixi.js'
 import { KirikiriLayer } from './KirikiriLayer'
 
 export class KirikiriRenderer {
   private readonly app: Application
-  private readonly layers: Record<string, KirikiriLayer> = {}
+  private layers!: {
+    base: KirikiriLayer
+    front: KirikiriLayer
+    message: KirikiriLayer
+  } & Record<string, KirikiriLayer>
+
+  private textElement!: Text
 
   constructor(
     private readonly container: HTMLDivElement,
@@ -18,20 +24,45 @@ export class KirikiriRenderer {
 
     this.container.appendChild(this.app.canvas)
 
-    const baseLayer = new KirikiriLayer(this.app.stage, 'base')
+    const baseLayer = new KirikiriLayer(this.app, 'base')
     baseLayer.zIndex = 0
     this.app.stage.addChild(baseLayer)
-    this.layers.base = baseLayer
 
-    const frontLayer = new KirikiriLayer(this.app.stage, 'front')
+    const frontLayer = new KirikiriLayer(this.app, 'front')
     frontLayer.zIndex = 1
     this.app.stage.addChild(frontLayer)
-    this.layers.front = frontLayer
 
-    const messageLayer = new KirikiriLayer(this.app.stage, 'message0')
+    const messageLayer = new KirikiriLayer(this.app, 'message')
     messageLayer.zIndex = 100
     this.app.stage.addChild(messageLayer)
-    this.layers.message = messageLayer
+
+    const message3Layer = new KirikiriLayer(this.app, 3)
+    message3Layer.zIndex = 200
+    messageLayer.addChild(message3Layer)
+
+    const message0Layer = new KirikiriLayer(this.app, 'message0')
+    message0Layer.zIndex = 300
+    messageLayer.addChild(message0Layer)
+
+    this.layers = {
+      base: baseLayer,
+      front: frontLayer,
+      message: messageLayer,
+      message0: message0Layer,
+      3: message3Layer,
+    }
+
+    this.textElement = new Text({
+      text: '',
+      style: {
+        fontSize: 24,
+        fill: 0xFFFFFF,
+        fontFamily: 'Kiwi Maru',
+        wordWrap: true,
+      },
+    })
+
+    message0Layer.setPage('fore', this.textElement)
   }
 
   async setImage(data: {
@@ -43,7 +74,7 @@ export class KirikiriRenderer {
     y?: number
     visible?: boolean
   }) {
-    const { file, layer, page, opacity = 1, x = 0, y = 0, visible = true } = data
+    const { file, layer, page } = data
 
     const layerGroup = this.getOrCreateLayer(layer)
 
@@ -59,37 +90,42 @@ export class KirikiriRenderer {
     )
   }
 
-  getOrCreateLayer(layer: string | number): KirikiriLayer {
+  getOrCreateLayer(layer: string | number) {
     if (!this.layers[layer]) {
-      this.layers[layer] = new KirikiriLayer(this.app.stage, layer)
+      const newLayer = new KirikiriLayer(this.app, layer)
 
       if (typeof layer === 'string') {
         if (layer.startsWith('message')) {
-          this.layers.message.addChild(this.layers[layer])
+          this.layers.message.addChild(newLayer)
+        }
+        else {
+          throw new Error(`Layer ${layer} not found`)
         }
       }
       else {
         if (layer === 3) {
-          this.layers.message.addChild(this.layers[layer])
+          this.layers.message.addChild(newLayer)
         }
         else {
-          this.layers.front.addChild(this.layers[layer])
+          this.layers.front.addChild(newLayer)
         }
       }
+
+      this.layers[layer] = newLayer
     }
 
     return this.layers[layer]
   }
 
-  getLayersArr(): KirikiriLayer[] {
+  getLayersArr() {
     return Object.values(this.layers)
   }
 
-  transition(name: string) {
+  transition() {
     const layers = this.getLayersArr()
 
     for (const layer of layers) {
-      layer.transition(name)
+      layer.transition()
     }
   }
 
@@ -141,13 +177,38 @@ export class KirikiriRenderer {
 
     const layerGroup = this.getOrCreateLayer(layer)
 
-    console.log(data, layerGroup)
-
     layerGroup.setLayerOptions({
       page,
       visible,
       autohide,
       index,
     })
+  }
+
+  setText(text: string) {
+    this.textElement.text = text
+  }
+
+  /**
+   * Remove all children from the fore and back of all message layers.
+   */
+  clearMessageLayers() {
+    this.layers.message.fore.removeChildren()
+    this.layers.message.back.removeChildren()
+  }
+
+  /**
+   * Remove all children from the specified layer.
+   */
+  clearLayer(layer: string | number, page?: 'back' | 'fore') {
+    const layerGroup = this.getOrCreateLayer(layer)
+
+    if (page) {
+      layerGroup[page].removeChildren()
+    }
+    else {
+      layerGroup.fore.removeChildren()
+      layerGroup.back.removeChildren()
+    }
   }
 }

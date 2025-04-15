@@ -12,4 +12,6 @@ const schema = z.object({
 
 export async function changeLayerCountCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
+
+  engine.logger.warn('Unimplemented command', 'changeLayerCountCommand')
 }

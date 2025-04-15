@@ -6,7 +6,5 @@ const schema = z.object({}).strict()
 export async function waitForClickCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  return new Promise((resolve) => {
-
-  })
+  engine.logger.warn('Unimplemented command', 'waitForClickCommand')
 }

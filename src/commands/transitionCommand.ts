@@ -18,7 +18,7 @@ const schema = z.object({
 export async function transitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  engine.renderer.transition('')
+  engine.renderer.transition()
 
   const waitForTransitionNotifier = new CustomEvent('wt')
 

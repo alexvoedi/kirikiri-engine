@@ -21,7 +21,7 @@ describe('splitMultiCommandLine', () => {
   })
 
   it('should return the line if there are no commands', () => {
-    const line = 'if( sf.d1_s==void )	sf.d1_s=0;	// test'
+    const line = 'if( sf.d1_s==void ) sf.d1_s=0; // test'
     const result = splitMultiCommandLine(line)
     expect(result).toEqual([line])
   })
@@ -29,7 +29,7 @@ describe('splitMultiCommandLine', () => {
   it('should handle an empty string', () => {
     const line = ''
     const result = splitMultiCommandLine(line)
-    expect(result).toEqual([])
+    expect(result).toEqual([''])
   })
 
   it('should work with scripts', () => {

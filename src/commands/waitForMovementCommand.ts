@@ -7,4 +7,6 @@ const schema = z.object({
 
 export async function waitForMovementCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
+
+  engine.logger.warn('Unimplemented command', 'waitForMovementCommand')
 }

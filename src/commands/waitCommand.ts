@@ -18,10 +18,27 @@ const schema = z.object({
 export async function waitCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-
   return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve()
-    }, parsed.time)
+    if (parsed.mode === 'until') {
+      const currentTimestamp = Date.now()
+
+      const dt = currentTimestamp - (engine.commandStorage.resetWait?.timestamp ?? 0)
+
+      if (dt) {
+        const remainingTime = parsed.time - dt
+
+        setTimeout(() => {
+          resolve()
+        }, remainingTime)
+      }
+      else {
+        resolve()
+      }
+    }
+    else {
+      setTimeout(() => {
+        resolve()
+      }, parsed.time)
+    }
   })
 }

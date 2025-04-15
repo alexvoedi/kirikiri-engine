@@ -1,4 +1,5 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
+import { merge } from 'lodash'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -9,6 +10,5 @@ const schema = z.object({
 export async function historyCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  engine.history.enabled = parsed.enabled ?? engine.history.enabled
-  engine.history.output = parsed.output ?? engine.history.output
+  merge(engine.commandStorage.history, parsed)
 }

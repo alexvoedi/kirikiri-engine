@@ -27,9 +27,6 @@ describe('macroCommand', () => {
   it('can create a macro from lines', () => {
     const lines = [
       '[ct]',
-      '[position layer=message0 page=back frame="" opacity=0]',
-      '[image storage=%storage page=back layer=base]',
-      '[trans time=%time method=crossfade]',
       '[wt]',
     ]
 

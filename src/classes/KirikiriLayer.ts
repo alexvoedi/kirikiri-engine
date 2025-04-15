@@ -1,25 +1,27 @@
-import type { Sprite } from 'pixi.js'
-import { Container, RenderLayer } from 'pixi.js'
+import type { Application, Renderable, Sprite } from 'pixi.js'
+import { Container } from 'pixi.js'
 
 export class KirikiriLayer extends Container {
-  private fore: Container<Sprite>
-  private back: Container<Sprite>
+  readonly fore: Container
+  readonly back: Container
 
-  constructor(stage: Container, readonly layer: string | number) {
-    super()
+  constructor(private readonly app: Application, readonly layer: string | number) {
+    super({
+      label: `${layer}`,
+    })
 
     this.back = new Container({
       label: 'back',
     })
-    stage.addChild(this.back)
+    this.addChild(this.back)
 
     this.fore = new Container({
       label: 'fore',
     })
-    stage.addChild(this.fore)
+    this.addChild(this.fore)
   }
 
-  setPage(page: 'back' | 'fore', element: Sprite, options?: {
+  setPage(page: 'back' | 'fore', element: Renderable, options?: {
     visible?: boolean
   }) {
     this[page].removeChildren()
@@ -31,7 +33,7 @@ export class KirikiriLayer extends Container {
     this[page].addChild(element)
   }
 
-  transition(name: string) {
+  transition() {
     const fore = this.fore.getChildByLabel('fore') as Sprite
 
     if (!fore)
@@ -64,17 +66,9 @@ export class KirikiriLayer extends Container {
     const page = this[data.page]
 
     if (data.left !== undefined)
-      page.x = data.left
+      page.x = (this.app.screen.width / 480) * data.left
     if (data.top !== undefined)
-      page.y = data.top
-    if (data.width !== undefined)
-      page.width = data.width
-    if (data.height !== undefined)
-      page.height = data.height
-    if (data.visible !== undefined)
-      page.visible = data.visible
-    if (data.opacity !== undefined)
-      page.alpha = data.opacity / 255
+      page.y = (this.app.screen.height / 576) * data.top
   }
 
   setLayerOptions(data: {
@@ -87,5 +81,10 @@ export class KirikiriLayer extends Container {
       this.visible = data.visible
     if (data.index !== undefined)
       this.zIndex = data.index
+  }
+
+  reset() {
+    this.back.removeChildren()
+    this.fore.removeChildren()
   }
 }

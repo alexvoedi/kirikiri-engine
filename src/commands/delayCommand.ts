@@ -1,16 +1,18 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
+import { merge } from 'lodash'
 import { z } from 'zod'
+import { createIntegerSchema } from '../schemas/zod'
 
 const schema = z.object({
   speed: z.union([
     z.literal('nowait'),
     z.literal('user'),
-    z.string()
-      .transform(value => Number.parseFloat(value))
-      .refine(value => !Number.isNaN(value), { message: 'Invalid number' }),
+    createIntegerSchema(),
   ]),
 }).strict()
 
 export async function delayCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  schema.parse(props)
+  const parsed = schema.parse(props)
+
+  merge(engine.commandStorage.delay, parsed)
 }

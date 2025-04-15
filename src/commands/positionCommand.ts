@@ -1,9 +1,9 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
-import { createBooleanSchema, createIntegerSchema, createPageSchema } from '../schemas/zod'
+import { createAlphanumericSchema, createBooleanSchema, createIntegerSchema, createPageSchema } from '../schemas/zod'
 
 const schema = z.object({
-  layer: z.string().optional(),
+  layer: createAlphanumericSchema().optional(),
   page: createPageSchema().optional(),
   left: createIntegerSchema().optional(),
   top: createIntegerSchema().optional(),

@@ -22,10 +22,12 @@ import { layerOptionCommand } from '../commands/layerOptionCommand'
 import { loadPluginCommand } from '../commands/loadPluginCommand'
 import { createMacro } from '../commands/macroCommand'
 import { moveCommand } from '../commands/moveCommand'
+import { playBackgroundMusicCommand } from '../commands/playBackgroundMusicCommand'
 import { playSoundEffectCommand } from '../commands/playSoundEffectCommand'
 import { positionCommand } from '../commands/positionCommand'
 import { releaseLayerImageCommand } from '../commands/releaseLayerImageCommand'
 import { resetWaitCommand } from '../commands/resetWaitCommand'
+import { rightClickCommand } from '../commands/rightClickCommand'
 import { scenarioExitCommand } from '../commands/scenarioExitCommand'
 import { scriptCommand } from '../commands/scriptCommand'
 import { stopSoundEffectCommand } from '../commands/stopSoundEffectCommand'
@@ -41,7 +43,9 @@ import { COMMAND_BLOCKS } from '../constants'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
+import { extractCommands } from '../utils/extractCommands'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
+import { findClosingCommandIndex } from '../utils/findClosingCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
 import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
 import { isComment } from '../utils/isComment'
@@ -69,22 +73,6 @@ export class KirikiriEngine {
    * Logger instance.
    */
   readonly logger: ConsolaInstance
-
-  /**
-   * List of files that are not processed yet but were found during processing of a script.
-   */
-  private readonly unprocessedFiles: string[] = []
-
-  /**
-   *  History
-   */
-  readonly history: {
-    output: boolean
-    enabled: boolean
-  } = {
-      output: false,
-      enabled: false,
-    }
 
   /**
    * Counts how often a command was called.
@@ -119,6 +107,38 @@ export class KirikiriEngine {
       testmode: 0,
     },
   }
+
+  /**
+   * State storage.
+   */
+  readonly commandStorage: {
+    resetWait?: {
+      timestamp?: number
+    }
+    rclick?: {
+      call?: boolean
+      jump?: boolean
+      target?: string
+      storage?: string
+      enabled?: boolean
+    }
+    history?: {
+      output?: boolean
+      enabled?: boolean
+    }
+    delay?: {
+      speed?: 'nowait' | 'user' | number
+    }
+  } = {
+      delay: {
+        speed: 20,
+      },
+    }
+
+  /**
+   * Message
+   */
+  readonly text: string = ''
 
   constructor({ container, game, options }: {
     container: HTMLDivElement
@@ -262,6 +282,12 @@ export class KirikiriEngine {
 
       try {
         switch (firstCharacter) {
+          case '*': {
+            index += 1
+
+            break
+          }
+
           case '@':
           case '[': {
             const { command, props } = extractCommand(line)
@@ -341,8 +367,10 @@ export class KirikiriEngine {
               break
             }
           }
-
           default: {
+            // Text
+            await this.processText(line)
+
             index += 1
             break
           }
@@ -365,9 +393,68 @@ export class KirikiriEngine {
     } while (index < lines.length)
   }
 
+  async renderText(text: string) {
+    const renderSpeed = 50
+
+    return new Promise<void>((resolve) => {
+      this.renderer.setText(text)
+
+      setTimeout(() => {
+        resolve()
+      }, renderSpeed)
+    })
+  }
+
   /**
-   *
+   * Process text.
    */
+  async processText(text: string) {
+    const commands = extractCommands(text)
+
+    const textWithoutCommands = Object.values(commands).reduce((acc, command) => {
+      const { startIndex, endIndex } = command
+
+      // Adjust indices based on the length of the text removed so far
+      const adjustedStartIndex = startIndex - (text.length - acc.length)
+      const adjustedEndIndex = endIndex - (text.length - acc.length)
+
+      return acc.slice(0, adjustedStartIndex) + acc.slice(adjustedEndIndex + 1)
+    }, text)
+
+    // render each letter one after another with the given speed by setting the visible text up to the current index - use settimeout for this
+    for (let i = 0; i < textWithoutCommands.length; i++) {
+      if (commands[i]) {
+        const { command, props } = commands[i]
+
+        const macro = this.macros[command]
+
+        if (macro) {
+          await macro(props)
+
+          continue
+        }
+
+        try {
+          const commandFunction = this.getCommand(command)
+
+          if (commandFunction) {
+            await commandFunction(this, props)
+            this.updateCommandCallCount(command)
+          }
+          else {
+            this.logger.warn(`Unknown command: ${command} at line ${i + 1}`)
+          }
+        }
+        catch {
+          this.logger.error(`Error processing command: ${command} at line ${i + 1}`)
+        }
+      }
+
+      const currentText = textWithoutCommands.slice(0, i + 1)
+
+      await this.renderText(currentText)
+    }
+  }
 
   /**
    * Adds a command to the call count or increments it if it already exists.
@@ -496,6 +583,12 @@ export class KirikiriEngine {
       }
       case 'fadeinbgm': {
         return fadeBackgroundMusicInCommand
+      }
+      case 'playbgm': {
+        return playBackgroundMusicCommand
+      }
+      case 'rclick': {
+        return rightClickCommand
       }
     }
 

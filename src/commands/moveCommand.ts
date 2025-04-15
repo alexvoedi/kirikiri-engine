@@ -1,8 +1,9 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { createAlphanumericSchema } from '../schemas/zod'
 
 const schema = z.object({
-  layer: z.string(),
+  layer: createAlphanumericSchema(),
   time: z.string().transform(value => Number.parseInt(value, 10)).optional(),
   path: z.string().transform((value) => {
     return value.split(' ').map((point) => {
@@ -18,4 +19,6 @@ const schema = z.object({
 
 export async function moveCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
+
+  engine.logger.warn('Unimplemented command', 'moveCommand')
 }

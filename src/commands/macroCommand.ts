@@ -33,7 +33,7 @@ export function createMacro(engine: KirikiriEngine, props: Record<string, unknow
             await command(requiredProps)
           }
           catch (e) {
-            console.log(e)
+            engine.logger.error(`Error processing command: ${placeholders[index]} at line ${index + 1}`, e)
           }
         }
       }
