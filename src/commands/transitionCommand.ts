@@ -4,7 +4,7 @@ import { createFloatSchema } from '../schemas/zod'
 
 const schema = z.object({
   time: createFloatSchema(),
-  method: z.enum(['universal', 'scroll', 'crossfade', 'turn', 'rotatezoom']).optional(),
+  method: z.enum(['universal', 'scroll', 'crossfade', 'turn', 'rotatezoom']).optional().default('crossfade'),
   bgcolor: z.string().optional(),
   factor: z.string()
     .transform(value => Number.parseFloat(value))
@@ -18,11 +18,7 @@ const schema = z.object({
 export async function transitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  engine.renderer.transition()
-
-  const waitForTransitionNotifier = new CustomEvent('wt')
-
-  setTimeout(() => {
-    window.dispatchEvent(waitForTransitionNotifier)
-  }, parsed.time)
+  engine.renderer.transition(parsed.method, {
+    time: parsed.time,
+  })
 }

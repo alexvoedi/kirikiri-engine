@@ -59,6 +59,8 @@ export class KirikiriRenderer {
         fill: 0xFFFFFF,
         fontFamily: 'Kiwi Maru',
         wordWrap: true,
+        breakWords: true,
+        wordWrapWidth: this.app.screen.width,
       },
     })
 
@@ -74,7 +76,7 @@ export class KirikiriRenderer {
     y?: number
     visible?: boolean
   }) {
-    const { file, layer, page } = data
+    const { file, layer, page, opacity } = data
 
     const layerGroup = this.getOrCreateLayer(layer)
 
@@ -87,6 +89,9 @@ export class KirikiriRenderer {
     layerGroup.setPage(
       page,
       sprite,
+      {
+        opacity,
+      },
     )
   }
 
@@ -117,16 +122,34 @@ export class KirikiriRenderer {
     return this.layers[layer]
   }
 
-  getLayersArr() {
-    return Object.values(this.layers)
-  }
+  transition(transitionName: 'universal' | 'scroll' | 'crossfade' | 'turn' | 'rotatezoom', options: {
+    time: number
+  }) {
+    const fadeStep = 1000 / (options.time * 60)
 
-  transition() {
-    const layers = this.getLayersArr()
+    const layers = [this.layers.base, this.layers.front]
 
-    for (const layer of layers) {
-      layer.transition()
+    let timer = 1
+    const iterate = (delta: { deltaTime: number }) => {
+      layers.forEach(layer => layer.transition(fadeStep, delta.deltaTime))
+
+      timer -= fadeStep * delta.deltaTime
+
+      if (timer <= 0) {
+        timer = 0
+
+        const waitForTransitionNotifier = new CustomEvent('wt')
+        setTimeout(() => {
+          window.dispatchEvent(waitForTransitionNotifier)
+        }, options.time)
+
+        timer = 1
+
+        this.app.ticker.remove(iterate)
+      }
     }
+
+    this.app.ticker.add(iterate)
   }
 
   setPosition(data: {

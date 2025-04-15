@@ -6,10 +6,12 @@ const schema = z.object({
 }).strict()
 
 /**
+ * Implements the `loadplugin` command.
+ *
  * Loads a plugin file.
  */
 export async function loadPluginCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  engine.logger.warn('Unimplemented command', 'loadPluginCommand')
+  // we cannot load .dll files - we need to reimplement this
 }

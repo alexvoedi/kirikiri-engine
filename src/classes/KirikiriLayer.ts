@@ -23,34 +23,37 @@ export class KirikiriLayer extends Container {
 
   setPage(page: 'back' | 'fore', element: Renderable, options?: {
     visible?: boolean
+    opacity?: number
   }) {
-    this[page].removeChildren()
+    const pageObj = this[page]
 
-    if (page === 'fore') {
-      element.visible = options?.visible ?? true
+    pageObj.removeChildren()
+
+    pageObj.visible = options?.visible ?? page !== 'fore'
+
+    if (options?.opacity !== undefined) {
+      pageObj.alpha = options.opacity
     }
 
-    this[page].addChild(element)
+    pageObj.addChild(element)
   }
 
-  transition() {
-    const fore = this.fore.getChildByLabel('fore') as Sprite
+  transition(step: number, dt: number) {
+    this.fadeTransition(step, dt)
+  }
 
-    if (!fore)
-      return
+  fadeTransition(step: number, dt: number) {
+    this.fore.alpha -= step * dt
 
-    fore.alpha = 1
-    fore.visible = false
+    if (this.fore.alpha <= 0) {
+      this.fore.alpha = 0
 
-    const back = this.back.getChildByLabel('back') as Sprite
+      this.fore.removeChildren()
+      this.back.children.forEach(child => this.fore.addChild(child))
+      this.back.removeChildren()
 
-    if (!back)
-      return
-
-    fore.texture = back.texture
-    fore.visible = true
-
-    back.removeFromParent()
+      this.fore.alpha = 1
+    }
   }
 
   setPosition(data: {

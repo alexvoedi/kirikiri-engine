@@ -38,20 +38,21 @@ import { waitForClickCommand } from '../commands/waitForClickCommand'
 import { waitForMovementCommand } from '../commands/waitForMovementCommand'
 import { waitForSoundEffectCommand } from '../commands/waitForSoundEffectCommand'
 import { waitForTextClickCommand } from '../commands/waitForTextClickCommand'
-import { waitForTransitionCommand } from '../commands/waitForTransitionCommand.1'
+import { waitForTransitionCommand } from '../commands/waitForTransitionCommand'
 import { COMMAND_BLOCKS } from '../constants'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { extractCommands } from '../utils/extractCommands'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
-import { findClosingCommandIndex } from '../utils/findClosingCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
 import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
 import { isComment } from '../utils/isComment'
 import { sanitizeLine } from '../utils/sanitizeLine'
 import { splitMultiCommandLine } from '../utils/splitMultiCommandLine'
 import { KirikiriRenderer } from './KirikiriRenderer'
+import { waitForBackgroundMusicCommand } from '../commands/waitForBackgroundMusicCommand'
+import { stopBackgroundMusicCommand } from '../commands/stopBackgroundMusicCommand'
 
 export class KirikiriEngine {
   /**
@@ -88,6 +89,8 @@ export class KirikiriEngine {
    * All available subroutines.
    */
   readonly subroutines: Record<string, string[]> = {}
+
+  timestamp: number = 0
 
   /**
    * Global script context.
@@ -276,7 +279,7 @@ export class KirikiriEngine {
     do {
       const line = lines[index]
 
-      // console.log(line)
+      // this.logLineWithTimestamp(line)
 
       const firstCharacter = line.charAt(0)
 
@@ -393,8 +396,14 @@ export class KirikiriEngine {
     } while (index < lines.length)
   }
 
+  logLineWithTimestamp(line: string) {
+    const timestamp = Date.now()
+    this.logger.debug(timestamp - this.timestamp, line)
+    this.timestamp = timestamp
+  }
+
   async renderText(text: string) {
-    const renderSpeed = 50
+    const renderSpeed = 40
 
     return new Promise<void>((resolve) => {
       this.renderer.setText(text)
@@ -589,6 +598,12 @@ export class KirikiriEngine {
       }
       case 'rclick': {
         return rightClickCommand
+      }
+      case 'wl': {
+        return waitForBackgroundMusicCommand
+      }
+      case 'stopbgm': {
+        return stopBackgroundMusicCommand
       }
     }
 

@@ -22,5 +22,16 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
     audio.loop = parsed.loop
   }
 
+  window.addEventListener('stopbgm', () => {
+    audio.pause()
+  })
+
   audio.play()
+
+
+  const waitForBackgroundMusicNotifier = new CustomEvent('wl')
+
+  audio.addEventListener('ended', () => {
+    window.dispatchEvent(waitForBackgroundMusicNotifier)
+  })
 }

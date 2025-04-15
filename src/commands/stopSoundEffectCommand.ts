@@ -6,8 +6,14 @@ const schema = z.object({
   cond: z.string().optional(),
 }).strict()
 
+/**
+ * Implements the `stopse` command.
+ *
+ * Stops a sound effect.
+ */
 export async function stopSoundEffectCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  engine.logger.warn('Unimplemented command', 'stopSoundEffectCommand')
+  const stopSoundEffectNotifier = new CustomEvent('stopse')
+  window.dispatchEvent(stopSoundEffectNotifier)
 }

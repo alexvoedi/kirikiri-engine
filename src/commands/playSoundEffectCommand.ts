@@ -31,6 +31,10 @@ export async function playSoundEffectCommand(engine: KirikiriEngine, props?: Rec
     audio.loop = parsed.loop
   }
 
+  window.addEventListener('stopse', () => {
+    audio.pause()
+  })
+
   audio.play()
 
   const waitForSoundEffectNotifier = new CustomEvent('ws')
