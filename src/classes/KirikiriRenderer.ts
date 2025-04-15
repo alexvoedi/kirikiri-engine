@@ -25,24 +25,19 @@ export class KirikiriRenderer {
     this.container.appendChild(this.app.canvas)
 
     const baseLayer = new KirikiriLayer(this.app, 'base')
-    baseLayer.zIndex = 0
     this.app.stage.addChild(baseLayer)
 
     const frontLayer = new KirikiriLayer(this.app, 'front')
-    frontLayer.zIndex = 1
     this.app.stage.addChild(frontLayer)
 
     const messageLayer = new KirikiriLayer(this.app, 'message')
-    messageLayer.zIndex = 100
     this.app.stage.addChild(messageLayer)
 
     const message3Layer = new KirikiriLayer(this.app, 3)
-    message3Layer.zIndex = 200
-    messageLayer.addChild(message3Layer)
+    this.app.stage.addChild(message3Layer)
 
     const message0Layer = new KirikiriLayer(this.app, 'message0')
-    message0Layer.zIndex = 300
-    messageLayer.addChild(message0Layer)
+    this.app.stage.addChild(message0Layer)
 
     this.layers = {
       base: baseLayer,
@@ -53,10 +48,10 @@ export class KirikiriRenderer {
     }
 
     this.textElement = new Text({
-      text: '',
+      text: 'dummy',
       style: {
         fontSize: 24,
-        fill: 0xFFFFFF,
+        fill: 0xFF0000,
         fontFamily: 'Kiwi Maru',
         wordWrap: true,
         breakWords: true,
@@ -64,6 +59,7 @@ export class KirikiriRenderer {
       },
     })
 
+    message0Layer.setPage('back', this.textElement)
     message0Layer.setPage('fore', this.textElement)
   }
 
@@ -71,12 +67,11 @@ export class KirikiriRenderer {
     file: string
     layer: string | number
     page: 'back' | 'fore'
-    opacity?: number
     x?: number
     y?: number
     visible?: boolean
   }) {
-    const { file, layer, page, opacity } = data
+    const { file, layer, page } = data
 
     const layerGroup = this.getOrCreateLayer(layer)
 
@@ -89,32 +84,26 @@ export class KirikiriRenderer {
     layerGroup.setPage(
       page,
       sprite,
-      {
-        opacity,
-      },
     )
   }
 
   getOrCreateLayer(layer: string | number) {
+    if (layer === 'message') {
+      return this.layers.message
+    }
+
+    if (layer === 'message0') {
+      return this.layers.message0
+    }
+
+    if (layer === 3) {
+      return this.layers[3]
+    }
+
     if (!this.layers[layer]) {
       const newLayer = new KirikiriLayer(this.app, layer)
 
-      if (typeof layer === 'string') {
-        if (layer.startsWith('message')) {
-          this.layers.message.addChild(newLayer)
-        }
-        else {
-          throw new Error(`Layer ${layer} not found`)
-        }
-      }
-      else {
-        if (layer === 3) {
-          this.layers.message.addChild(newLayer)
-        }
-        else {
-          this.layers.front.addChild(newLayer)
-        }
-      }
+      this.layers.front.addChild(newLayer)
 
       this.layers[layer] = newLayer
     }

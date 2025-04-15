@@ -1,39 +1,28 @@
-import type { Application, Renderable, Sprite } from 'pixi.js'
+import type { Application, Renderable } from 'pixi.js'
 import { Container } from 'pixi.js'
 
 export class KirikiriLayer extends Container {
-  readonly fore: Container
-  readonly back: Container
+  readonly back = new Container({
+    label: 'back',
+  })
+
+  readonly fore = new Container({
+    label: 'fore',
+  })
 
   constructor(private readonly app: Application, readonly layer: string | number) {
     super({
       label: `${layer}`,
     })
 
-    this.back = new Container({
-      label: 'back',
-    })
     this.addChild(this.back)
-
-    this.fore = new Container({
-      label: 'fore',
-    })
     this.addChild(this.fore)
   }
 
-  setPage(page: 'back' | 'fore', element: Renderable, options?: {
-    visible?: boolean
-    opacity?: number
-  }) {
+  setPage(page: 'back' | 'fore', element: Renderable) {
     const pageObj = this[page]
 
     pageObj.removeChildren()
-
-    pageObj.visible = options?.visible ?? page !== 'fore'
-
-    if (options?.opacity !== undefined) {
-      pageObj.alpha = options.opacity
-    }
 
     pageObj.addChild(element)
   }
