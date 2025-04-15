@@ -4,4 +4,7 @@ export default antfu({
   typescript: true,
   jsonc: true,
   ignores: ['node_modules', 'dist', 'build', 'coverage', 'public'],
+  rules: {
+    'no-console': 'warn',
+  },
 })

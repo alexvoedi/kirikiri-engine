@@ -22,19 +22,22 @@ export function createMacro(engine: KirikiriEngine, props: Record<string, unknow
     name: parsed.name,
     macro: async (props: Record<string, string>): Promise<void> => {
       for (const [index, command] of commands.entries()) {
-        if (placeholders[index]) {
-          const requiredProps: Record<string, string> = {}
+        try {
+          if (placeholders[index]) {
+            const requiredProps: Record<string, string> = {}
 
-          Object.keys(placeholders[index]).forEach((key) => {
-            requiredProps[key] = props[key]
-          })
+            Object.keys(placeholders[index]).forEach((key) => {
+              requiredProps[key] = props[key]
+            })
 
-          try {
             await command(requiredProps)
           }
-          catch (e) {
-            engine.logger.error(`Error processing command: ${placeholders[index]} at line ${index + 1}`, e)
+          else {
+            await command({})
           }
+        }
+        catch (e) {
+          engine.logger.error(`Error processing command:`, e)
         }
       }
     },

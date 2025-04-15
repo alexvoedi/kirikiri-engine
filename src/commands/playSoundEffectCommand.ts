@@ -1,4 +1,5 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
+import { merge } from 'lodash'
 import { z } from 'zod'
 import { checkCondition } from '../utils/checkCondition'
 
@@ -31,15 +32,33 @@ export async function playSoundEffectCommand(engine: KirikiriEngine, props?: Rec
     audio.loop = parsed.loop
   }
 
-  window.addEventListener('stopse', () => {
-    audio.pause()
-  })
-
-  audio.play()
-
   const waitForSoundEffectNotifier = new CustomEvent('ws')
 
   audio.addEventListener('ended', () => {
+    merge(engine.commandStorage, {
+      playse: {
+        playing: false,
+      },
+    })
     window.dispatchEvent(waitForSoundEffectNotifier)
+  })
+
+  window.addEventListener('stopse', () => {
+    audio.pause()
+    window.dispatchEvent(waitForSoundEffectNotifier)
+  })
+
+  return new Promise((resolve) => {
+    audio.addEventListener('canplaythrough', () => {
+      merge(engine.commandStorage, {
+        playse: {
+          playing: true,
+        },
+      })
+
+      audio.play()
+
+      resolve()
+    })
   })
 }

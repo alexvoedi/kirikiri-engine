@@ -37,7 +37,7 @@ import { transitionCommand } from '../commands/transitionCommand'
 import { waitCommand } from '../commands/waitCommand'
 import { waitForBackgroundMusicCommand } from '../commands/waitForBackgroundMusicCommand'
 import { waitForClickCommand } from '../commands/waitForClickCommand'
-import { waitForMovementCommand } from '../commands/waitForMovementCommand'
+import { waitForMoveCommand } from '../commands/waitForMoveCommand'
 import { waitForSoundEffectCommand } from '../commands/waitForSoundEffectCommand'
 import { waitForTextClickCommand } from '../commands/waitForTextClickCommand'
 import { waitForTransitionCommand } from '../commands/waitForTransitionCommand'
@@ -45,11 +45,11 @@ import { COMMAND_BLOCKS } from '../constants'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
-import { extractCommands } from '../utils/extractCommands'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
 import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
 import { isComment } from '../utils/isComment'
+import { removeCommandsFromText } from '../utils/removeCommandsFromText'
 import { sanitizeLine } from '../utils/sanitizeLine'
 import { splitMultiCommandLine } from '../utils/splitMultiCommandLine'
 import { KirikiriRenderer } from './KirikiriRenderer'
@@ -102,6 +102,11 @@ export class KirikiriEngine {
           volume2: undefined,
         },
       },
+      keyDownHook: {
+        add: () => null,
+        remove: () => null,
+      },
+      stopAllTransitions: () => null,
     },
     sf: {
       firstclear: 1,
@@ -115,6 +120,18 @@ export class KirikiriEngine {
    * State storage.
    */
   readonly commandStorage: {
+    playse?: {
+      playing?: boolean
+    }
+    playbgm?: {
+      playing?: boolean
+    }
+    trans?: {
+      transitioning?: boolean
+    }
+    move?: {
+      moving?: boolean
+    }
     resetWait?: {
       timestamp?: number
     }
@@ -279,8 +296,6 @@ export class KirikiriEngine {
     do {
       const line = lines[index]
 
-      // this.logLineWithTimestamp(line)
-
       const firstCharacter = line.charAt(0)
 
       try {
@@ -418,50 +433,40 @@ export class KirikiriEngine {
    * Process text.
    */
   async processText(text: string) {
-    const commands = extractCommands(text)
+    const { commands, text: textWithoutCommands } = removeCommandsFromText(text)
 
-    const textWithoutCommands = Object.values(commands).reduce((acc, command) => {
-      const { startIndex, endIndex } = command
-
-      // Adjust indices based on the length of the text removed so far
-      const adjustedStartIndex = startIndex - (text.length - acc.length)
-      const adjustedEndIndex = endIndex - (text.length - acc.length)
-
-      return acc.slice(0, adjustedStartIndex) + acc.slice(adjustedEndIndex + 1)
-    }, text)
-
-    // render each letter one after another with the given speed by setting the visible text up to the current index - use settimeout for this
-    for (let i = 0; i < textWithoutCommands.length; i++) {
-      if (commands[i]) {
-        const { command, props } = commands[i]
-
-        const macro = this.macros[command]
-
-        if (macro) {
-          await macro(props)
-
-          continue
-        }
-
-        try {
-          const commandFunction = this.getCommand(command)
-
-          if (commandFunction) {
-            await commandFunction(this, props)
-            this.updateCommandCallCount(command)
-          }
-          else {
-            this.logger.warn(`Unknown command: ${command} at line ${i + 1}`)
-          }
-        }
-        catch {
-          this.logger.error(`Error processing command: ${command} at line ${i + 1}`)
-        }
-      }
-
-      const currentText = textWithoutCommands.slice(0, i + 1)
+    for (let i = 0; i < textWithoutCommands.length + 1; i++) {
+      const currentText = textWithoutCommands.slice(0, i)
 
       await this.renderText(currentText)
+
+      if (commands[i]) {
+        for (const c of commands[i]) {
+          const { command, props } = c
+
+          try {
+            const macro = this.macros[command]
+            if (macro) {
+              await macro(props)
+            }
+            else {
+              const commandFunction = this.getCommand(command)
+
+              if (commandFunction) {
+                await commandFunction(this, props)
+              }
+              else {
+                this.logger.warn(`Unknown command: ${command} at line ${i + 1}`)
+              }
+            }
+
+            this.updateCommandCallCount(command)
+          }
+          catch {
+            // this.logger.error(`Error processing command: ${command} at line ${i + 1}`)
+          }
+        }
+      }
     }
   }
 
@@ -537,9 +542,6 @@ export class KirikiriEngine {
       case 'stopse': {
         return stopSoundEffectCommand
       }
-      case 'wm': {
-        return waitForMovementCommand
-      }
       case 'style': {
         return styleCommand
       }
@@ -604,6 +606,9 @@ export class KirikiriEngine {
       }
       case 'stopbgm': {
         return stopBackgroundMusicCommand
+      }
+      case 'wm': {
+        return waitForMoveCommand
       }
     }
 

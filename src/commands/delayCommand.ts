@@ -14,5 +14,7 @@ const schema = z.object({
 export async function delayCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  merge(engine.commandStorage.delay, parsed)
+  merge(engine.commandStorage, {
+    deplay: parsed,
+  })
 }

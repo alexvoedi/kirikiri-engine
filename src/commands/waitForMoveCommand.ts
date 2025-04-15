@@ -6,32 +6,31 @@ import { checkCondition } from '../utils/checkCondition'
 const schema = z.object({
   canskip: createBooleanSchema().optional(),
   cond: z.string().optional(),
-  buf: z.string().optional(),
 }).strict()
 
 /**
- * Implements the `ws` command.
+ * Implements the `wm` command.
  *
- * Waits for a sound effect to finish playing.
+ * Waits for a move instruction to finish.
  */
-export async function waitForSoundEffectCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
+export async function waitForMoveCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
   const isConditionMet = parsed.cond ? await checkCondition(engine, parsed.cond) : true
 
-  const playing = engine.commandStorage.playse?.playing ?? false
+  const moving = engine.commandStorage.move?.moving ?? false
 
   return new Promise((resolve) => {
-    if (!isConditionMet || !playing) {
+    if (!isConditionMet || !moving) {
       resolve()
     }
     else {
-      const handleSoundEffectEnded = () => {
-        window.removeEventListener('ws', handleSoundEffectEnded)
+      const handleMoveEnded = () => {
+        window.removeEventListener('wm', handleMoveEnded)
         resolve()
       }
 
-      window.addEventListener('ws', handleSoundEffectEnded)
+      window.addEventListener('wm', handleMoveEnded)
     }
   })
 }

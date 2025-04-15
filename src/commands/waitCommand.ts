@@ -22,11 +22,9 @@ export async function waitCommand(engine: KirikiriEngine, props?: Record<string,
     if (parsed.mode === 'until') {
       const currentTimestamp = Date.now()
 
-      const dt = currentTimestamp - (engine.commandStorage.resetWait?.timestamp ?? 0)
+      const remainingTime = parsed.time - (currentTimestamp - (engine.commandStorage.resetWait?.timestamp ?? 0))
 
-      if (dt) {
-        const remainingTime = parsed.time - dt
-
+      if (remainingTime > 0) {
         setTimeout(() => {
           resolve()
         }, remainingTime)

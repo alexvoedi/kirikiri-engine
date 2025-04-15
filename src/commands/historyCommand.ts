@@ -10,5 +10,7 @@ const schema = z.object({
 export async function historyCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  merge(engine.commandStorage.history, parsed)
+  merge(engine.commandStorage, {
+    history: parsed,
+  })
 }

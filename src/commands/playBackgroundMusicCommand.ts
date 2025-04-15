@@ -1,4 +1,5 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
+import { merge } from 'lodash'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -22,16 +23,48 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
     audio.loop = parsed.loop
   }
 
-  window.addEventListener('stopbgm', () => {
-    audio.pause()
-  })
-
-  audio.play()
-
-
   const waitForBackgroundMusicNotifier = new CustomEvent('wl')
 
   audio.addEventListener('ended', () => {
+    merge(engine.commandStorage, {
+      playbgm: {
+        playing: false,
+      },
+    })
     window.dispatchEvent(waitForBackgroundMusicNotifier)
+  })
+
+  audio.addEventListener('fadeoutbgm', (e) => {
+    const customEvent = e as CustomEvent<{
+      time: number
+    }>
+
+    const fadeOutTime = customEvent.detail.time
+
+    audio.volume = 0
+
+    merge(engine.commandStorage, {
+      playbgm: {
+        playing: false,
+      },
+    })
+    window.dispatchEvent(waitForBackgroundMusicNotifier)
+  })
+
+  window.addEventListener('stopbgm', () => {
+    audio.pause()
+    window.dispatchEvent(waitForBackgroundMusicNotifier)
+  })
+
+  return new Promise((resolve) => {
+    audio.addEventListener('canplaythrough', () => {
+      merge(engine.commandStorage, {
+        playbgm: {
+          playing: true,
+        },
+      })
+      audio.play()
+      resolve()
+    })
   })
 }

@@ -7,6 +7,8 @@ export class KirikiriRenderer {
     base: KirikiriLayer
     front: KirikiriLayer
     message: KirikiriLayer
+    3: KirikiriLayer
+    message0: KirikiriLayer
   } & Record<string, KirikiriLayer>
 
   private textElement!: Text
@@ -50,8 +52,8 @@ export class KirikiriRenderer {
     this.textElement = new Text({
       text: 'dummy',
       style: {
-        fontSize: 24,
-        fill: 0xFF0000,
+        fontSize: this.app.screen.height / 35,
+        fill: 0xFFFFFF,
         fontFamily: 'Kiwi Maru',
         wordWrap: true,
         breakWords: true,
@@ -59,7 +61,6 @@ export class KirikiriRenderer {
       },
     })
 
-    message0Layer.setPage('back', this.textElement)
     message0Layer.setPage('fore', this.textElement)
   }
 
@@ -70,8 +71,9 @@ export class KirikiriRenderer {
     x?: number
     y?: number
     visible?: boolean
+    opacity?: number
   }) {
-    const { file, layer, page } = data
+    const { file, layer, page, opacity } = data
 
     const layerGroup = this.getOrCreateLayer(layer)
 
@@ -84,6 +86,9 @@ export class KirikiriRenderer {
     layerGroup.setPage(
       page,
       sprite,
+      {
+        opacity,
+      },
     )
   }
 
@@ -125,14 +130,8 @@ export class KirikiriRenderer {
       timer -= fadeStep * delta.deltaTime
 
       if (timer <= 0) {
-        timer = 0
-
         const waitForTransitionNotifier = new CustomEvent('wt')
-        setTimeout(() => {
-          window.dispatchEvent(waitForTransitionNotifier)
-        }, options.time)
-
-        timer = 1
+        window.dispatchEvent(waitForTransitionNotifier)
 
         this.app.ticker.remove(iterate)
       }
@@ -166,7 +165,7 @@ export class KirikiriRenderer {
 
     const layerGroup = this.getOrCreateLayer(layer)
 
-    layerGroup.setPosition({
+    layerGroup.setPageAttributes({
       page,
       left,
       top,
@@ -189,7 +188,7 @@ export class KirikiriRenderer {
 
     const layerGroup = this.getOrCreateLayer(layer)
 
-    layerGroup.setLayerOptions({
+    layerGroup.setLayerAttributes({
       page,
       visible,
       autohide,
@@ -205,8 +204,7 @@ export class KirikiriRenderer {
    * Remove all children from the fore and back of all message layers.
    */
   clearMessageLayers() {
-    this.layers.message.fore.removeChildren()
-    this.layers.message.back.removeChildren()
+    // todo: clear the layer
   }
 
   /**
@@ -222,5 +220,32 @@ export class KirikiriRenderer {
       layerGroup.fore.removeChildren()
       layerGroup.back.removeChildren()
     }
+  }
+
+  /**
+   * Clear text command
+   */
+  clearText() {
+    this.textElement.text = ''
+    this.layers[3].alpha = 0
+    this.layers[3].back.removeChildren()
+    this.layers[3].fore.removeChildren()
+  }
+
+  /**
+   * Move and change the opacity
+   */
+  moveAndChangeOpacity({ layer, ...rest }: {
+    layer: string | number
+    time: number
+    path: Array<{
+      x: number
+      y: number
+      opacity: number
+    }>
+  }) {
+    const layerObj = this.getOrCreateLayer(layer)
+
+    layerObj.moveAndChangeOpacity(rest)
   }
 }

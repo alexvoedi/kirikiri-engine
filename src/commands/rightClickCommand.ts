@@ -19,5 +19,7 @@ const schema = z.object({
 export async function rightClickCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  merge(engine.commandStorage.rclick ?? {}, parsed)
+  merge(engine.commandStorage, {
+    rclick: parsed,
+  })
 }

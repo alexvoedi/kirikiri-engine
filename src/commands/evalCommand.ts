@@ -8,6 +8,8 @@ const schema = z.object({
 }).strict()
 
 /**
+ * Implements the `eval` command.
+ *
  * Evaluates an expression
  */
 export async function evalCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
@@ -20,12 +22,12 @@ export async function evalCommand(engine: KirikiriEngine, props?: Record<string,
 
   const parser = new IScriptParser(context)
 
-  const parsedCondition = parser.parse(parsed.exp)
+  const parsedExpression = parser.parse(parsed.exp)
 
   try {
-    await parser.run(parsedCondition)
+    await parser.run(parsedExpression)
   }
   catch (e) {
-    engine.logger.error('Error in condition:', e)
+    engine.logger.error('Error in expression:', e)
   }
 }

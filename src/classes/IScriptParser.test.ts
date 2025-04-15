@@ -144,4 +144,32 @@ describe('iScriptParser', () => {
       },
     })
   })
+
+  it('can run a function', () => {
+    const context = {
+      kag: {
+        bgm: {
+          buf1: {
+            volume2: undefined,
+          },
+        },
+        keyDownHook: {
+          add: () => null,
+          remove: () => null,
+        },
+        stopAllTransitions: () => null,
+      },
+    }
+    const parser = new IScriptParser(context)
+    const script = `
+    function myKeyDownHook(key,shift){
+      if(key == VK_SHIFT)
+        kag.stopAllTransitions();
+        return 0;
+    }
+    myKeyDownHook();
+    `
+    const converted = parser.parse(script)
+    expect(() => parser.run(converted)).not.toThrow()
+  })
 })

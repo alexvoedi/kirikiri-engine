@@ -1,7 +1,10 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { createBooleanSchema } from '../schemas/zod'
 
-const schema = z.object({}).strict()
+const schema = z.object({
+  canskip: createBooleanSchema().optional(),
+}).strict()
 
 /**
  * Implements the `wl` command.
@@ -11,12 +14,19 @@ const schema = z.object({}).strict()
 export async function waitForBackgroundMusicCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
+  const playing = engine.commandStorage.playse?.playing ?? false
+
   return new Promise((resolve) => {
-    const handleSoundEffectEnded = () => {
-      window.removeEventListener('wl', handleSoundEffectEnded)
+    if (!playing) {
       resolve()
     }
+    else {
+      const handleSoundEffectEnded = () => {
+        window.removeEventListener('wl', handleSoundEffectEnded)
+        resolve()
+      }
 
-    window.addEventListener('wl', handleSoundEffectEnded)
+      window.addEventListener('wl', handleSoundEffectEnded)
+    }
   })
 }

@@ -26,8 +26,7 @@ describe('macroCommand', () => {
 
   it('can create a macro from lines', () => {
     const lines = [
-      '[ct]',
-      '[wt]',
+      '[eval exp="x == 3"]',
     ]
 
     const macro = createMacro(engine, {
@@ -36,9 +35,22 @@ describe('macroCommand', () => {
     })
 
     expect(macro.name).toBe('changeType_cross')
-    expect(() => macro.macro({
-      storage: 'test',
-      time: '1000',
-    })).not.toThrowError()
+    expect(() => macro.macro({})).not.toThrowError()
+  })
+
+  it('can run a mscro', () => {
+    const lines = [
+      '[macro name=cwt]',
+      '[eval exp="kag.keyDownHook.add(myKeyDownHook)"]',
+      '[wt canskip=false]',
+      '[eval exp="kag.keyDownHook.remove(myKeyDownHook)"]',
+      '[endmacro]',
+    ]
+
+    const macro = createMacro(engine, {
+      name: 'cwt',
+      lines,
+    })
+    expect(() => macro.macro({})).not.toThrowError()
   })
 })
