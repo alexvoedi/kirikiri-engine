@@ -1,6 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
+import { EngineEvent } from '../constants'
 
 const schema = z.object({
   storage: z.string(),
@@ -34,20 +35,30 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
     window.dispatchEvent(waitForBackgroundMusicNotifier)
   })
 
-  audio.addEventListener('fadeoutbgm', (e) => {
+  audio.addEventListener(EngineEvent.FADEOUT_BGM, async (e) => {
     const customEvent = e as CustomEvent<{
+      // time in milliseconds to fade out
       time: number
     }>
 
-    const _fadeOutTime = customEvent.detail.time
-
-    audio.volume = 0
+    await new Promise<void>((resolve) => {
+      const fadeOutInterval = setInterval(() => {
+        if (audio.volume > 0) {
+          audio.volume = Math.max(0, audio.volume - 0.01)
+        }
+        else {
+          clearInterval(fadeOutInterval)
+          resolve()
+        }
+      }, customEvent.detail.time / 100)
+    })
 
     merge(engine.commandStorage, {
       playbgm: {
         playing: false,
       },
     })
+
     window.dispatchEvent(waitForBackgroundMusicNotifier)
   })
 

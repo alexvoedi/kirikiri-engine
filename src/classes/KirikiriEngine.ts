@@ -1,4 +1,5 @@
 import type { ConsolaInstance } from 'consola'
+import type { CommandStorage } from '../types/CommandStorage'
 import type { Game } from '../types/Game'
 import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
 import { createConsola } from 'consola'
@@ -7,7 +8,7 @@ import { getCommand } from '../commands/getCommand'
 import { ifCommand } from '../commands/ifCommand'
 import { createMacro } from '../commands/macroCommand'
 import { scriptCommand } from '../commands/scriptCommand'
-import { COMMAND_BLOCKS, EngineEvent } from '../constants'
+import { COMMAND_BLOCKS, EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
 import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
@@ -17,11 +18,17 @@ import { findFileInTree } from '../utils/findFileInTree'
 import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
 import { isComment } from '../utils/isComment'
 import { removeCommandsFromText } from '../utils/removeCommandsFromText'
+import { removeFileExtension } from '../utils/removeFileExtension'
 import { sanitizeLine } from '../utils/sanitizeLine'
 import { splitMultiCommandLine } from '../utils/splitMultiCommandLine'
 import { KirikiriRenderer } from './KirikiriRenderer'
 
 export class KirikiriEngine {
+  /**
+   * Container element where the game will be rendered.
+   */
+  readonly container: HTMLDivElement
+
   /**
    * Game data.
    */
@@ -53,14 +60,27 @@ export class KirikiriEngine {
   readonly macros: Record<string, (props: Record<string, string>) => Promise<void>> = {}
 
   /**
-   * All available subroutines.
+   * All available subroutines grouped by script.
    */
-  readonly subroutines: Record<string, string[]> = {}
+  readonly subroutines: Record<string, Record<string, string[]>> = {}
 
   /**
-   * Current subroutine
+   * Current script
    */
-  currentSubroutine: string | null = null
+  currentData: {
+    script: string | null
+    subroutine: string | null
+    line: string | null
+  } = {
+      script: null,
+      subroutine: null,
+      line: null,
+    }
+
+  /**
+   * Subroutine call stack
+   */
+  readonly subroutineCallStack: string[] = []
 
   /**
    * State
@@ -70,65 +90,16 @@ export class KirikiriEngine {
   /**
    * Global script context.
    */
-  readonly globalScriptContext = {
-    kag: {
-      bgm: {
-        buf1: {
-          volume2: undefined,
-        },
-      },
-      keyDownHook: {
-        add: () => null,
-        remove: () => null,
-      },
-      stopAllTransitions: () => null,
-    },
-    sf: {
-      firstclear: 1,
-    },
-    f: {
-      testmode: 0,
-    },
-  }
+  readonly globalScriptContext = GLOBAL_SCRIPT_CONTEXT
 
   /**
    * State storage.
    */
-  readonly commandStorage: {
-    playse?: {
-      playing?: boolean
-    }
-    playbgm?: {
-      playing?: boolean
-    }
-    trans?: {
-      transitioning?: boolean
-    }
-    move?: {
-      moving?: boolean
-    }
-    resetWait?: {
-      timestamp?: number
-    }
-    rclick?: {
-      call?: boolean
-      jump?: boolean
-      target?: string
-      storage?: string
-      enabled?: boolean
-    }
-    history?: {
-      output?: boolean
-      enabled?: boolean
-    }
-    delay?: {
-      speed?: 'nowait' | 'user' | number
-    }
-  } = {
-      delay: {
-        speed: 20,
-      },
-    }
+  readonly commandStorage: CommandStorage = {
+    delay: {
+      speed: 20,
+    },
+  }
 
   /**
    * Message
@@ -140,6 +111,7 @@ export class KirikiriEngine {
     game: Game
     options?: KirikiriEngineOptions
   }) {
+    this.container = container
     this.game = game
 
     this.options = options || {
@@ -165,8 +137,6 @@ export class KirikiriEngine {
 
     const lines = await this.loadFile(this.game.entry)
 
-    await this.registerAllSubroutines(lines)
-
     this.state = EngineState.RUNNING
 
     await this.runLines(lines)
@@ -178,7 +148,7 @@ export class KirikiriEngine {
    * Load the file content with the correct encoding.
    */
   async loadFile(filename: string): Promise<string[]> {
-    const foundFiles = findFileInTree(filename, this.game.files, { recursive: true })
+    const foundFiles = findFileInTree(filename, this.game.files)
 
     if (foundFiles.length === 0) {
       throw new Error(`File ${filename} not found`)
@@ -204,11 +174,15 @@ export class KirikiriEngine {
 
     const lines = this.splitAndSanitize(text)
 
+    this.currentData.script = removeFileExtension(filename)
+
+    await this.registerAllSubroutines(lines)
+
     return lines
   }
 
   getFullFilePath(filename: string) {
-    const foundFiles = findFileInTree(filename, this.game.files, { recursive: true })
+    const foundFiles = findFileInTree(filename, this.game.files)
 
     if (foundFiles.length === 0) {
       throw new Error(`File ${filename} not found`)
@@ -235,6 +209,12 @@ export class KirikiriEngine {
   }
 
   async registerAllSubroutines(lines: string[]) {
+    if (!this.currentData.script) {
+      throw new Error(`No current script set`)
+    }
+
+    this.subroutines[this.currentData.script] = {}
+
     let index = 0
 
     do {
@@ -260,9 +240,9 @@ export class KirikiriEngine {
         // Get the lines of the subroutine
         const subroutineLines = lines.slice(index + 1, closingIndex)
 
-        this.subroutines[subroutineName] = subroutineLines
+        this.subroutines[this.currentData.script][subroutineName] = subroutineLines
 
-        this.logger.info('Registered new subroutine:', subroutineName)
+        // this.logger.info('Registered new subroutine:', subroutineName)
       }
 
       index += 1
@@ -276,18 +256,20 @@ export class KirikiriEngine {
     do {
       if (this.state === EngineState.PAUSED) {
         await new Promise<void>((resolve) => {
-          window.addEventListener(EngineEvent.CONTINUE.type, () => {
+          window.addEventListener(EngineEvent.CONTINUE, () => {
             resolve()
           })
         })
       }
 
       if (this.state === EngineState.CANCEL_SUBROUTINE) {
-        this.state = EngineState.RUNNING
-
-        window.dispatchEvent(EngineEvent.SUBROUTINE_CANCELLED)
-
-        this.currentSubroutine = null
+        if (this.subroutineCallStack.length === 0) {
+          this.state = EngineState.RUNNING
+          window.dispatchEvent(new CustomEvent(EngineEvent.SUBROUTINE_CANCELLED))
+        }
+        else {
+          this.logger.info(`Cancelled subroutine ${this.subroutineCallStack[this.subroutineCallStack.length - 1]}`)
+        }
 
         return
       }
@@ -297,9 +279,13 @@ export class KirikiriEngine {
       const firstCharacter = line.charAt(0)
 
       try {
+        this.currentData.line = line
+
         switch (firstCharacter) {
           case '*': {
-            this.currentSubroutine = line.slice(1).trim()
+            const subroutineName = line.slice(1).trim()
+
+            await this.runSubroutine(subroutineName)
 
             index += 1
 
@@ -324,7 +310,6 @@ export class KirikiriEngine {
             if (isBlockCommand) {
               const closingIndex = findClosingBlockCommandIndex(command, index, lines)
 
-              // Get the lines between the opening and closing block command
               const blockLines = lines.slice(index + 1, closingIndex)
 
               switch (command) {
@@ -385,7 +370,6 @@ export class KirikiriEngine {
             }
           }
           default: {
-            // Text
             await this.processText(line)
 
             index += 1
@@ -475,57 +459,54 @@ export class KirikiriEngine {
   }
 
   /**
-   * Prints the command call count to the console.
-   */
-  private printCommandCallCount() {
-    const sortedCommandCallCount = Object.entries(this.commandCallCount)
-      .sort((a, b) => b[1] - a[1])
-
-    this.logger.info('Command call count:')
-
-    sortedCommandCallCount.forEach(([command, count]) => {
-      this.logger.debug(`${command}: ${count}`)
-    })
-  }
-
-  /**
    * Runs the specified subroutine. If `force` is true, it will cancel the current subroutine.
    */
-  async runSubroutine(name: string, options?: {
+  async runSubroutine(subroutineName: string, options?: {
     file?: string
     force?: boolean
   }) {
     if (options?.file) {
       const lines = await this.loadFile(options.file)
-
       await this.registerAllSubroutines(lines)
     }
 
-    const subroutine = this.subroutines[name]
+    if (!this.currentData.script) {
+      throw new Error(`No current script set`)
+    }
+
+    const subroutine = this.subroutines[this.currentData.script][subroutineName]
 
     if (!subroutine) {
-      this.logger.warn(`Subroutine ${name} not found`)
+      this.logger.warn(`Subroutine ${subroutineName} not found`)
       return
     }
 
-    if (this.currentSubroutine && options?.force) {
+    if (this.currentData.subroutine && options?.force) {
       await new Promise<void>((resolve) => {
         const onCancelled = () => {
-          this.logger.info(`Cancelled subroutine ${this.currentSubroutine}`)
-
-          window.removeEventListener(EngineEvent.SUBROUTINE_CANCELLED.type, onCancelled)
+          this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
+          window.removeEventListener(EngineEvent.SUBROUTINE_CANCELLED, onCancelled)
           resolve()
         }
 
-        window.addEventListener(EngineEvent.SUBROUTINE_CANCELLED.type, onCancelled)
+        window.addEventListener(EngineEvent.SUBROUTINE_CANCELLED, onCancelled)
+
+        window.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE))
+        window.dispatchEvent(new CustomEvent(EngineEvent.STOP_BGM))
 
         this.state = EngineState.CANCEL_SUBROUTINE
       })
     }
 
-    this.logger.info(`Running subroutine ${name}`)
+    this.currentData.subroutine = subroutineName
 
+    this.logger.info(`Running subroutine ${subroutineName}`)
+
+    this.currentData.subroutine = subroutineName
+    this.subroutineCallStack.push(subroutineName)
     await this.runLines(subroutine)
+    this.subroutineCallStack.pop()
+    this.currentData.subroutine = this.subroutineCallStack[this.subroutineCallStack.length - 1] || null
   }
 
   getState() {
@@ -536,7 +517,7 @@ export class KirikiriEngine {
     this.state = state
 
     if (state === EngineState.RUNNING) {
-      window.dispatchEvent(EngineEvent.CONTINUE)
+      window.dispatchEvent(new CustomEvent(EngineEvent.CONTINUE))
     }
 
     this.logger.debug(`Engine state changed to: ${state}`)

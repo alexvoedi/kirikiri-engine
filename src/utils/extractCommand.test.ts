@@ -72,4 +72,15 @@ describe('extractCommand', () => {
       },
     })
   })
+
+  it('can extract the props of a command has special characters', () => {
+    const line = '[playvideo storage="どれみ1015.mpg"]'
+    const result = extractCommand(line)
+    expect(result).toEqual({
+      command: 'playvideo',
+      props: {
+        storage: 'どれみ1015.mpg',
+      },
+    })
+  })
 })

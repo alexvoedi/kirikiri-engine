@@ -37,7 +37,7 @@
     "lint:ci": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "vitest --run --coverage",
-    "test:watch": "CI=0 FORCE_COLOR=1 vitest --watch --coverage",
+    "test:watch": "CI=0 FORCE_COLOR=1 vitest --watch",
     "prepare": "husky",
     "typecheck": "tsc --noEmit",
     "knip": "knip --cache",

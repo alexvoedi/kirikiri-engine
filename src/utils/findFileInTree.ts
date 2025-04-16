@@ -6,15 +6,9 @@ import type { FileTree } from 'src/types/FileTree'
 export function findFileInTree(
   file: string,
   tree: FileTree,
-  options: {
-    recursive?: boolean
-    ignoreCase?: boolean
-  },
 ): string[] {
   // remove the stuff after the last dot if there is a dot
   const fileWithoutExtension = file.includes('.') ? file.substring(0, file.lastIndexOf('.')) : file
-
-  const { recursive = false, ignoreCase = false } = options
 
   const result: string[] = []
 
@@ -29,12 +23,12 @@ export function findFileInTree(
       const keyWithoutExtension = key.includes('.') ? key.substring(0, key.lastIndexOf('.')) : key
 
       if (
-        (ignoreCase ? keyWithoutExtension.toLowerCase() : keyWithoutExtension) === (ignoreCase ? fileWithoutExtension.toLowerCase() : fileWithoutExtension)
+        keyWithoutExtension.toLowerCase() === fileWithoutExtension.toLowerCase()
       ) {
         result.push(currentPath)
       }
 
-      if (recursive && typeof value === 'object') {
+      if (typeof value === 'object') {
         search(value, currentPath)
       }
     }

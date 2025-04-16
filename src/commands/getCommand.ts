@@ -20,6 +20,7 @@ import { loadPluginCommand } from './loadPluginCommand'
 import { moveCommand } from './moveCommand'
 import { playBackgroundMusicCommand } from './playBackgroundMusicCommand'
 import { playSoundEffectCommand } from './playSoundEffectCommand'
+import { playVideoCommand } from './playVideoCommand'
 import { positionCommand } from './positionCommand'
 import { releaseLayerImageCommand } from './releaseLayerImageCommand'
 import { resetWaitCommand } from './resetWaitCommand'
@@ -29,6 +30,7 @@ import { stopBackgroundMusicCommand } from './stopBackgroundMusicCommand'
 import { stopSoundEffectCommand } from './stopSoundEffectCommand'
 import { styleCommand } from './styleCommand'
 import { transitionCommand } from './transitionCommand'
+import { videoCommand } from './videoCommand'
 import { waitCommand } from './waitCommand'
 import { waitForBackgroundMusicCommand } from './waitForBackgroundMusicCommand'
 import { waitForClickCommand } from './waitForClickCommand'
@@ -76,6 +78,8 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   stopbgm: stopBackgroundMusicCommand,
   wm: waitForMoveCommand,
   fadeoutbgm: fadeOutBackgroundMusicCommand,
+  video: videoCommand,
+  playvideo: playVideoCommand,
 }
 
 export function getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {

@@ -1,5 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { removeFileExtension } from '../utils/removeFileExtension'
 
 const schema = z.union([
   z.object({
@@ -14,7 +15,7 @@ const schema = z.union([
      */
     storage: z.string(),
     /**
-     * The to jump to. If omitted will jump to the start of the script.
+     * The subroutine to jump to. If omitted will jump to the start of the script.
      */
     target: z.string(),
   }).strict(),
@@ -24,13 +25,11 @@ export async function jumpCommand(engine: KirikiriEngine, props?: Record<string,
   const parsed = schema.parse(props)
 
   if ('storage' in parsed && 'target' in parsed) {
-    const sanitizedTarget = parsed.target.replace(/^\*/, '')
+    const subroutine = parsed.target.replace(/^\*/, '')
 
-    const lines = await engine.loadFile(parsed.storage)
-
-    await engine.runLines(lines)
-
-    await engine.runSubroutine(sanitizedTarget)
+    return await engine.runSubroutine(subroutine, {
+      file: removeFileExtension(parsed.storage),
+    })
   }
 
   if ('storage' in parsed) {
@@ -38,8 +37,8 @@ export async function jumpCommand(engine: KirikiriEngine, props?: Record<string,
   }
 
   if ('target' in parsed) {
-    const sanitizedTarget = parsed.target.replace(/^\*/, '')
+    const subroutine = parsed.target.replace(/^\*/, '')
 
-    await engine.runSubroutine(sanitizedTarget)
+    return await engine.runSubroutine(subroutine)
   }
 }

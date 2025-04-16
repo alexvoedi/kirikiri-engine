@@ -160,6 +160,9 @@ function processLines(engine: KirikiriEngine, lines: string[]) {
           }
         })
       }
+      else {
+        engine.logger.error(line, error)
+      }
 
       index += 1
     }

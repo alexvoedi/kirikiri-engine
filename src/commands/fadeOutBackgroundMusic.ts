@@ -1,5 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { EngineEvent } from '../constants'
 import { createIntegerSchema } from '../schemas/zod'
 
 const schema = z.object({
@@ -12,10 +13,7 @@ const schema = z.object({
 export async function fadeOutBackgroundMusicCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  const fadeOutBackgroundMusicNotifier = new CustomEvent('fadeoutbgm', {
-    detail: {
-      time: parsed.time,
-    },
-  })
-  window.dispatchEvent(fadeOutBackgroundMusicNotifier)
+  window.dispatchEvent(new CustomEvent(EngineEvent.FADEOUT_BGM, {
+    detail: parsed,
+  }))
 }

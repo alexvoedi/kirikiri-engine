@@ -8,8 +8,6 @@ export default defineConfig({
       reporter: ['text', 'lcov', 'html'],
       include: ['src/**/*.ts'],
       exclude: ['**/*.test.ts', 'src/cli.ts', 'src/enums/**/*.ts'],
-      cleanOnRerun: true,
-      skipFull: true,
     },
     globals: true,
     environment: 'jsdom',

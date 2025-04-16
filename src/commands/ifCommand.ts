@@ -4,7 +4,6 @@ import { checkCondition } from '../utils/checkCondition'
 
 const schema = z.object({
   exp: z.string(),
-  index: z.number(),
   lines: z.array(z.string()),
 }).strict()
 

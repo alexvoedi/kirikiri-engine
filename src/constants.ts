@@ -23,10 +23,37 @@ export const GLOBALS = {
   Plugins: {
     link: () => null,
   },
+  WaveSoundBuffer: {
+    freeDirectSound: () => null,
+  },
   saveRegistry: () => null,
 }
 
+export const GLOBAL_SCRIPT_CONTEXT = {
+  kag: {
+    bgm: {
+      buf1: {
+        volume2: undefined,
+      },
+    },
+    keyDownHook: {
+      add: () => null,
+      remove: () => null,
+    },
+    stopAllTransitions: () => null,
+  },
+  sf: {
+    firstclear: 0,
+  },
+  f: {
+    testmode: 0,
+  },
+}
+
 export const EngineEvent = {
-  CONTINUE: new CustomEvent('engine_continue'),
-  SUBROUTINE_CANCELLED: new CustomEvent('engine_subroutine_cancelled'),
+  CONTINUE: 'engine_continue',
+  SUBROUTINE_CANCELLED: 'engine_subroutine_cancelled',
+  STOP_SE: 'stopse',
+  STOP_BGM: 'stopbgm',
+  FADEOUT_BGM: 'fadeoutbgm',
 }

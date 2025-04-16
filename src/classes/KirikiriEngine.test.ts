@@ -43,4 +43,10 @@ describe('kirikiriEngine', () => {
 
     expect(() => engine.runLines(lines)).not.toThrow()
   })
+
+  it('can get the full file path', () => {
+    const filename = 'どれみ1015.mpg'
+
+    expect(engine.getFullFilePath(filename)).toBe('https://static.nekatz.com/ojamajo/video/どれみ1015.mp4')
+  })
 })
