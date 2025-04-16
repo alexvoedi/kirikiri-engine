@@ -1,3 +1,7 @@
 {
-  "typescript.preferences.importModuleSpecifier": "relative"
+  "typescript.preferences.importModuleSpecifier": "relative",
+  "sonarlint.connectedMode.project": {
+    "connectionId": "https-sonar-nekatz-com",
+    "projectKey": "alexvoedi_kirikiri-engine_0784ce0a-0ce7-4f79-bba5-322954b59460"
+  }
 }
