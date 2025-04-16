@@ -1,7 +1,8 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
-import { createFloatSchema, createIntegerSchema } from '../schemas/zod'
+import { EngineEvent } from '../constants'
+import { createBooleanSchema, createFloatSchema, createIntegerSchema } from '../schemas/zod'
 
 const schema = z.object({
   time: createFloatSchema(),
@@ -11,10 +12,23 @@ const schema = z.object({
   storage: z.string().optional(),
   rule: z.string().optional(),
   vague: createIntegerSchema().optional(),
+  children: createBooleanSchema().optional(),
 }).strict()
 
 export async function transitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
+
+  const onTransitionEnded = () => {
+    merge(engine.commandStorage, {
+      trans: {
+        transitioning: false,
+      },
+    })
+
+    window.removeEventListener(EngineEvent.TRANSITION_ENDED, onTransitionEnded)
+  }
+
+  window.addEventListener(EngineEvent.TRANSITION_ENDED, onTransitionEnded)
 
   return new Promise((resolve) => {
     merge(engine.commandStorage, {
@@ -25,6 +39,7 @@ export async function transitionCommand(engine: KirikiriEngine, props?: Record<s
 
     engine.renderer.transition(parsed.method, {
       time: parsed.time,
+      children: parsed.children,
     })
 
     resolve()

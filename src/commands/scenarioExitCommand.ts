@@ -1,5 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { EngineState } from '../enums/EngineState'
 
 const schema = z.object({}).strict()
 
@@ -11,5 +12,5 @@ const schema = z.object({}).strict()
 export async function scenarioExitCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  engine.logger.warn('Unimplemented command', 'scenarioExitCommand')
+  engine.setState(EngineState.CANCEL_SUBROUTINE)
 }

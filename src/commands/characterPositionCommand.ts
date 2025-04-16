@@ -7,8 +7,11 @@ const schema = z.object({
   y: createIntegerSchema().optional(),
 }).strict()
 
+/**
+ * Implements the `locate` command.
+ */
 export async function characterPositionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  schema.parse(props)
+  const parsed = schema.parse(props)
 
-  engine.logger.warn('Unimplemented command', 'characterPositionCommand')
+  engine.renderer.setNextElementPosition(parsed.x, parsed.y)
 }

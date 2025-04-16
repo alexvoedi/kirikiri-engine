@@ -35,6 +35,9 @@ export const GLOBAL_SCRIPT_CONTEXT = {
       buf1: {
         volume2: undefined,
       },
+      currentBuffer: {
+        status: null,
+      },
     },
     keyDownHook: {
       add: () => null,
@@ -53,7 +56,11 @@ export const GLOBAL_SCRIPT_CONTEXT = {
 export const EngineEvent = {
   CONTINUE: 'engine_continue',
   SUBROUTINE_CANCELLED: 'engine_subroutine_cancelled',
+  ALL_SUBROUTINES_CANCELLED: 'engine_all_subroutines_cancelled',
   STOP_SE: 'stopse',
   STOP_BGM: 'stopbgm',
+  STOP_TRANSITION: 'stoptrans',
   FADEOUT_BGM: 'fadeoutbgm',
+  TRANSITION_ENDED: 'wt',
+  TEXT_CLICK: 'text_click',
 }

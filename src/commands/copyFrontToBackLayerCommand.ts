@@ -1,10 +1,15 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 
-const schema = z.object({}).strict()
+const schema = z.object({
+  layer: z.string().optional(),
+}).strict()
 
+/**
+ * Implements the `backlay` command.
+ */
 export async function copyFrontToBackLayerCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  schema.parse(props)
+  const parsed = schema.parse(props)
 
-  engine.logger.warn('Unimplemented command', 'copyFrontToBackLayerCommand')
+  engine.renderer.copyFrontToBack(parsed.layer)
 }

@@ -14,7 +14,9 @@ describe('findFileInTree', () => {
     'docs': {
       'index.md': null,
       'images': {
+        'logo': null,
         'logo.png': null,
+        'logo.ks': null,
         'screenshot.png': null,
       },
     },
@@ -30,36 +32,43 @@ describe('findFileInTree', () => {
 
   it('should find a file without recursion', () => {
     const result = findFileInTree('README.md', mockTree)
-    expect(result).toEqual(['README.md'])
+    expect(result).toEqual('README.md')
   })
 
   it('should find a file with recursion', () => {
     const result = findFileInTree('findFileInTree.ts', mockTree)
-    expect(result).toEqual(['src/utils/findFileInTree.ts'])
+    expect(result).toEqual('src/utils/findFileInTree.ts')
   })
 
   it('should find a file with case-insensitive search', () => {
     const result = findFileInTree('readme.md', mockTree)
-    expect(result).toEqual(['README.md'])
+    expect(result).toEqual('README.md')
   })
 
   it('should return an empty array if the file is not found', () => {
     const result = findFileInTree('nonexistent.ts', mockTree)
-    expect(result).toEqual([])
+    expect(result).toEqual(undefined)
   })
 
   it('should return an empty array for an empty tree', () => {
     const result = findFileInTree('README.md', {})
-    expect(result).toEqual([])
+    expect(result).toEqual(undefined)
   })
 
   it('can find files in directories with spaces', () => {
     const result = findFileInTree('menu.ks', mockTree)
-    expect(result).toEqual(['script/08. other/menu.ks'])
+    expect(result).toEqual('script/08. other/menu.ks')
   })
 
   it('can find with special characters', () => {
     const result = findFileInTree('どれみ1015.mpg', mockTree)
-    expect(result).toEqual(['videos/どれみ1015.mp4'])
+    expect(result).toEqual('videos/どれみ1015.mp4')
+  })
+
+  it('finds the more specific file if multiple are available', () => {
+    expect(findFileInTree('index', mockTree)).toEqual('docs/index.md')
+    expect(findFileInTree('logo', mockTree)).toEqual('docs/images/logo')
+    expect(findFileInTree('logo.png', mockTree)).toEqual('docs/images/logo.png')
+    expect(findFileInTree('logo.ks', mockTree)).toEqual('docs/images/logo.ks')
   })
 })

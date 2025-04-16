@@ -3,6 +3,7 @@ import { z } from 'zod'
 
 const schema = z.object({
   storage: z.string(),
+  target: z.string().optional(),
 }).strict()
 
 /**
@@ -18,7 +19,11 @@ export async function callCommand(engine: KirikiriEngine, props?: Record<string,
       throw new Error(`File ${parsed.storage} not found in game files`)
     }
 
-    engine.loadFile(file)
+    await engine.loadFile(file)
+
+    if (parsed.target) {
+      await engine.runSubroutine(parsed.target)
+    }
   }
   catch (error) {
     engine.logger.debug(`Error loading file ${parsed.storage}: ${error}`)

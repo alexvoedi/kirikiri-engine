@@ -1,4 +1,5 @@
-import { Application, Assets, Sprite, Text } from 'pixi.js'
+import { Application, Assets, Rectangle, Sprite, Text, Texture } from 'pixi.js'
+import { EngineEvent } from '../constants'
 import { KirikiriLayer } from './KirikiriLayer'
 
 export class KirikiriRenderer {
@@ -12,6 +13,14 @@ export class KirikiriRenderer {
   } & Record<string, KirikiriLayer>
 
   private textElement!: Text
+
+  private readonly location: {
+    x: number
+    y: number
+  } = {
+      x: 0,
+      y: 0,
+    }
 
   constructor(
     private readonly container: HTMLDivElement,
@@ -81,14 +90,13 @@ export class KirikiriRenderer {
   }) {
     const { file, layer, page, opacity } = data
 
-    const layerGroup = this.getOrCreateLayer(layer)
-
     const texture = await Assets.load(file)
     const sprite = new Sprite(texture)
 
     sprite.width = this.app.screen.width
     sprite.height = this.app.screen.height
 
+    const layerGroup = this.getOrCreateLayer(layer)
     layerGroup.setPage(
       page,
       sprite,
@@ -124,6 +132,7 @@ export class KirikiriRenderer {
 
   transition(transitionName: 'universal' | 'scroll' | 'crossfade' | 'turn' | 'rotatezoom', options: {
     time: number
+    children?: boolean
   }) {
     const fadeStep = 1000 / (options.time * 60)
 
@@ -136,12 +145,22 @@ export class KirikiriRenderer {
       timer -= fadeStep * delta.deltaTime
 
       if (timer <= 0) {
-        const waitForTransitionNotifier = new CustomEvent('wt')
-        window.dispatchEvent(waitForTransitionNotifier)
+        window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
 
         this.app.ticker.remove(iterate)
       }
     }
+
+    const onStopTransition = () => {
+      this.app.ticker.remove(iterate)
+
+      layers.forEach(layer => layer.stopTransition())
+
+      window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
+      window.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
+    }
+
+    window.addEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
 
     this.app.ticker.add(iterate)
   }
@@ -210,7 +229,8 @@ export class KirikiriRenderer {
    * Remove all children from the fore and back of all message layers.
    */
   clearMessageLayers() {
-    // todo: clear the layer
+    this.layers.message.fore.removeChildren()
+    this.layers.message.back.removeChildren()
   }
 
   /**
@@ -253,5 +273,102 @@ export class KirikiriRenderer {
     const layerObj = this.getOrCreateLayer(layer)
 
     layerObj.moveAndChangeOpacity(rest)
+  }
+
+  setNextElementPosition(x?: number, y?: number) {
+    if (x !== undefined) {
+      this.location.x = x
+    }
+
+    if (y !== undefined) {
+      this.location.y = y
+    }
+  }
+
+  async addButton(data: {
+    file: string
+    callback: () => Promise<void>
+  }): Promise<void> {
+    const { file } = data
+
+    const source = await Assets.load(file)
+
+    const measure = new Texture({
+      source,
+    })
+
+    const width = measure.width / 3
+    const height = measure.height
+
+    const baseTexture = new Texture({
+      source,
+      frame: new Rectangle(0, 0, width, height),
+    })
+
+    const pressedTexture = new Texture({
+      source,
+      frame: new Rectangle(width, 0, width, height),
+    })
+
+    const hoverTexture = new Texture({
+      source,
+      frame: new Rectangle(width * 2, 0, width, height),
+    })
+
+    const scale = this.app.stage.width / 758
+
+    const buttonNormal = new Sprite(baseTexture)
+    buttonNormal.width = scale * width
+    buttonNormal.height = scale * height
+    buttonNormal.x = scale * this.location.x
+    buttonNormal.y = scale * this.location.y
+
+    buttonNormal.interactive = true
+
+    buttonNormal.on('pointerover', () => {
+      buttonNormal.texture = hoverTexture
+    })
+
+    buttonNormal.on('pointerout', () => {
+      buttonNormal.texture = baseTexture
+    })
+
+    buttonNormal.on('pointerdown', () => {
+      buttonNormal.texture = pressedTexture
+    })
+
+    buttonNormal.on('pointerup', () => {
+      buttonNormal.texture = hoverTexture
+    })
+
+    buttonNormal.on('click', async () => {
+      await data.callback()
+    })
+
+    this.layers.message.fore.addChild(buttonNormal)
+  }
+
+  clearMessageLayerPages() {
+    this.layers.message.fore.removeChildren()
+    this.layers.message.back.removeChildren()
+
+    this.layers.message0.fore.removeChildren()
+    this.layers.message0.back.removeChildren()
+  }
+
+  /**
+   * Copy front to back page
+   */
+  copyFrontToBack(layer?: string | number) {
+    if (layer) {
+      const layerGroup = this.getOrCreateLayer(layer)
+
+      layerGroup.copyFrontToBack()
+    }
+    else {
+      Object.values(this.layers).forEach((layerGroup) => {
+        layerGroup.copyFrontToBack()
+      })
+    }
   }
 }

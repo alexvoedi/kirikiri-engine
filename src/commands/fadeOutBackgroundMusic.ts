@@ -14,6 +14,8 @@ export async function fadeOutBackgroundMusicCommand(engine: KirikiriEngine, prop
   const parsed = schema.parse(props)
 
   window.dispatchEvent(new CustomEvent(EngineEvent.FADEOUT_BGM, {
-    detail: parsed,
+    detail: {
+      time: parsed.time,
+    },
   }))
 }

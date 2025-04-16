@@ -2,10 +2,12 @@ import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
 import { EngineEvent } from '../constants'
+import { createIntegerSchema } from '../schemas/zod'
 
 const schema = z.object({
   storage: z.string(),
   loop: z.string().transform(value => value === 'true').optional(),
+  time: createIntegerSchema().optional(),
 }).strict()
 
 /**
@@ -35,9 +37,8 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
     window.dispatchEvent(waitForBackgroundMusicNotifier)
   })
 
-  audio.addEventListener(EngineEvent.FADEOUT_BGM, async (e) => {
+  const onFadeOut = async (e: Event) => {
     const customEvent = e as CustomEvent<{
-      // time in milliseconds to fade out
       time: number
     }>
 
@@ -59,8 +60,13 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
       },
     })
 
+    audio.pause()
+
     window.dispatchEvent(waitForBackgroundMusicNotifier)
-  })
+    window.removeEventListener(EngineEvent.FADEOUT_BGM, onFadeOut)
+  }
+
+  window.addEventListener(EngineEvent.FADEOUT_BGM, onFadeOut)
 
   window.addEventListener('stopbgm', () => {
     audio.pause()
@@ -74,7 +80,31 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
           playing: true,
         },
       })
-      audio.play()
+
+      if (parsed.time) {
+        audio.volume = 0
+
+        audio.play()
+
+        const fadeDuration = parsed.time
+        const fadeStep = 50
+        const volumeStep = 1 / (fadeDuration / fadeStep)
+
+        const fadeInterval = setInterval(() => {
+          if (audio.volume + volumeStep >= 1) {
+            audio.volume = 1
+            clearInterval(fadeInterval)
+            resolve()
+          }
+          else {
+            audio.volume += volumeStep
+          }
+        }, fadeStep)
+      }
+      else {
+        audio.play()
+      }
+
       resolve()
     })
   })

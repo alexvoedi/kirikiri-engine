@@ -55,6 +55,15 @@ export class KirikiriLayer extends Container {
     this.fadeTransition(step, dt)
   }
 
+  stopTransition() {
+    // todo: fix this
+    // this.fore.removeChildren()
+    // this.back.children.forEach(child => this.fore.addChild(child))
+    // this.back.removeChildren()
+
+    // this.fore.alpha = 1
+  }
+
   fadeTransition(step: number, dt: number) {
     this.fore.alpha -= step * dt
 
@@ -75,7 +84,7 @@ export class KirikiriLayer extends Container {
     const page = this[data.page]
 
     if (data.left !== undefined)
-      page.x = (this.app.screen.width / 480) * data.left
+      page.x = (this.app.screen.width / 720) * data.left
     if (data.top !== undefined)
       page.y = (this.app.screen.height / 576) * data.top
   }
@@ -190,5 +199,10 @@ export class KirikiriLayer extends Container {
 
   interpolate(start: number, end: number, factor: number) {
     return start + (end - start) * factor
+  }
+
+  copyFrontToBack() {
+    this.back.removeChildren()
+    this.fore.children.forEach(child => this.back.addChild(child))
   }
 }

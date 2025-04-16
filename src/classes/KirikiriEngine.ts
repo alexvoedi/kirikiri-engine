@@ -135,11 +135,11 @@ export class KirikiriEngine {
   async run() {
     this.renderer.init()
 
-    const lines = await this.loadFile(this.game.entry)
+    await this.loadFile(this.game.entry)
 
     this.state = EngineState.RUNNING
 
-    await this.runLines(lines)
+    await this.runSubroutine('start')
 
     // this.printCommandCallCount()
   }
@@ -148,17 +148,13 @@ export class KirikiriEngine {
    * Load the file content with the correct encoding.
    */
   async loadFile(filename: string): Promise<string[]> {
-    const foundFiles = findFileInTree(filename, this.game.files)
+    const foundFile = findFileInTree(filename, this.game.files)
 
-    if (foundFiles.length === 0) {
+    if (!foundFile) {
       throw new Error(`File ${filename} not found`)
     }
 
-    if (foundFiles.length > 1) {
-      throw new Error(`File ${filename} found multiple times: ${foundFiles.join(', ')}`)
-    }
-
-    const fullPath = `/ojamajo/${foundFiles[0]}`
+    const fullPath = `/ojamajo/${foundFile}`
 
     const url = new URL(fullPath, this.game.root)
 
@@ -182,17 +178,13 @@ export class KirikiriEngine {
   }
 
   getFullFilePath(filename: string) {
-    const foundFiles = findFileInTree(filename, this.game.files)
+    const foundFile = findFileInTree(filename, this.game.files)
 
-    if (foundFiles.length === 0) {
+    if (!foundFile) {
       throw new Error(`File ${filename} not found`)
     }
 
-    if (foundFiles.length > 1) {
-      throw new Error(`File ${filename} found multiple times: ${foundFiles.join(', ')}`)
-    }
-
-    return `${this.game.root}/${foundFiles[0]}`
+    return `${this.game.root}/${foundFile}`
   }
 
   /**
@@ -263,9 +255,16 @@ export class KirikiriEngine {
       }
 
       if (this.state === EngineState.CANCEL_SUBROUTINE) {
-        if (this.subroutineCallStack.length === 0) {
+        this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
+        this.state = EngineState.RUNNING
+        window.dispatchEvent(new CustomEvent(EngineEvent.SUBROUTINE_CANCELLED))
+        return
+      }
+
+      if (this.state === EngineState.CANCEL_ALL_SUBROUTINES) {
+        if (this.subroutineCallStack.length === 1) {
           this.state = EngineState.RUNNING
-          window.dispatchEvent(new CustomEvent(EngineEvent.SUBROUTINE_CANCELLED))
+          window.dispatchEvent(new CustomEvent(EngineEvent.ALL_SUBROUTINES_CANCELLED))
         }
         else {
           this.logger.info(`Cancelled subroutine ${this.subroutineCallStack[this.subroutineCallStack.length - 1]}`)
@@ -276,6 +275,8 @@ export class KirikiriEngine {
 
       const line = lines[index]
 
+      console.log(line)
+
       const firstCharacter = line.charAt(0)
 
       try {
@@ -283,10 +284,6 @@ export class KirikiriEngine {
 
         switch (firstCharacter) {
           case '*': {
-            const subroutineName = line.slice(1).trim()
-
-            await this.runSubroutine(subroutineName)
-
             index += 1
 
             break
@@ -482,20 +479,7 @@ export class KirikiriEngine {
     }
 
     if (this.currentData.subroutine && options?.force) {
-      await new Promise<void>((resolve) => {
-        const onCancelled = () => {
-          this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
-          window.removeEventListener(EngineEvent.SUBROUTINE_CANCELLED, onCancelled)
-          resolve()
-        }
-
-        window.addEventListener(EngineEvent.SUBROUTINE_CANCELLED, onCancelled)
-
-        window.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE))
-        window.dispatchEvent(new CustomEvent(EngineEvent.STOP_BGM))
-
-        this.state = EngineState.CANCEL_SUBROUTINE
-      })
+      await this.cancelAllSubroutines()
     }
 
     this.currentData.subroutine = subroutineName
@@ -504,9 +488,28 @@ export class KirikiriEngine {
 
     this.currentData.subroutine = subroutineName
     this.subroutineCallStack.push(subroutineName)
+    this.logger.debug(`Running subroutine ${subroutineName}. Callstack: ${this.subroutineCallStack.join(' > ')}`)
     await this.runLines(subroutine)
     this.subroutineCallStack.pop()
     this.currentData.subroutine = this.subroutineCallStack[this.subroutineCallStack.length - 1] || null
+    this.logger.debug(`Finished subroutine ${subroutineName}. Callstack: ${this.subroutineCallStack.join(' > ')}`)
+  }
+
+  private async cancelAllSubroutines() {
+    return new Promise<void>((resolve) => {
+      const onCancelled = async () => {
+        this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
+        window.removeEventListener(EngineEvent.ALL_SUBROUTINES_CANCELLED, onCancelled)
+        resolve()
+      }
+
+      window.addEventListener(EngineEvent.ALL_SUBROUTINES_CANCELLED, onCancelled)
+
+      window.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE))
+      window.dispatchEvent(new CustomEvent(EngineEvent.STOP_BGM))
+
+      this.state = EngineState.CANCEL_ALL_SUBROUTINES
+    })
   }
 
   getState() {

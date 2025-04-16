@@ -8,9 +8,9 @@ import { clearMessageCommand } from './clearMessageCommand'
 import { clearTextCommand } from './clearTextCommand'
 import { copyFrontToBackLayerCommand } from './copyFrontToBackLayerCommand'
 import { delayCommand } from './delayCommand'
+import { deleteMessageLayerChildrenCommand } from './deleteMessageLayerChildrenCommand'
 import { embeddedTagCommand } from './embeddedTagCommand'
 import { evalCommand } from './evalCommand'
-import { fadeBackgroundMusicInCommand } from './fadeBackgroundMusicInCommand'
 import { fadeOutBackgroundMusicCommand } from './fadeOutBackgroundMusic'
 import { historyCommand } from './historyCommand'
 import { imageCommand } from './imageCommand'
@@ -28,6 +28,7 @@ import { rightClickCommand } from './rightClickCommand'
 import { scenarioExitCommand } from './scenarioExitCommand'
 import { stopBackgroundMusicCommand } from './stopBackgroundMusicCommand'
 import { stopSoundEffectCommand } from './stopSoundEffectCommand'
+import { stopTransitionCommand } from './stopTransitionCommand'
 import { styleCommand } from './styleCommand'
 import { transitionCommand } from './transitionCommand'
 import { videoCommand } from './videoCommand'
@@ -71,7 +72,7 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   loadplugin: loadPluginCommand,
   fgzoom: async () => { /* TODO: find out what this does */ },
   wfgzoom: async () => { /* TODO: find out what this does */ },
-  fadeinbgm: fadeBackgroundMusicInCommand,
+  fadeinbgm: playBackgroundMusicCommand,
   playbgm: playBackgroundMusicCommand,
   rclick: rightClickCommand,
   wl: waitForBackgroundMusicCommand,
@@ -80,6 +81,8 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   fadeoutbgm: fadeOutBackgroundMusicCommand,
   video: videoCommand,
   playvideo: playVideoCommand,
+  er: deleteMessageLayerChildrenCommand,
+  stoptrans: stopTransitionCommand,
 }
 
 export function getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {
