@@ -42,7 +42,7 @@ jobs:
     needs:
       - install-dependencies
     env:
-      GAME_ROOT: ${{ vars.GAME_ROOT }}
+      GAME_ROOT: ${{ secrets.GAME_ROOT }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
