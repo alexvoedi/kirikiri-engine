@@ -26,6 +26,7 @@ import { releaseLayerImageCommand } from './releaseLayerImageCommand'
 import { resetWaitCommand } from './resetWaitCommand'
 import { rightClickCommand } from './rightClickCommand'
 import { scenarioExitCommand } from './scenarioExitCommand'
+import { startanchorCommand } from './startanchorCommand'
 import { stopBackgroundMusicCommand } from './stopBackgroundMusicCommand'
 import { stopSoundEffectCommand } from './stopSoundEffectCommand'
 import { stopTransitionCommand } from './stopTransitionCommand'
@@ -83,6 +84,7 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   playvideo: playVideoCommand,
   er: deleteMessageLayerChildrenCommand,
   stoptrans: stopTransitionCommand,
+  startanchor: startanchorCommand,
 }
 
 export function getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {
