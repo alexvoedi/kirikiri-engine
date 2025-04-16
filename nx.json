@@ -21,12 +21,6 @@
       ],
       "cache": true
     },
-    "convert": {
-      "outputs": [
-        "{projectRoot}/public/scenarios"
-      ],
-      "cache": true
-    },
     "typecheck": {
       "cache": true
     },
@@ -42,14 +36,6 @@
       "plugin": "@nx/eslint/plugin",
       "options": {
         "targetName": "lint"
-      }
-    },
-    {
-      "plugin": "@nx/vite/plugin",
-      "options": {
-        "buildTargetName": "build",
-        "testTargetName": "test",
-        "serveTargetName": "serve"
       }
     }
   ]

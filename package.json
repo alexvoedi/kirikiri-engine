@@ -40,6 +40,7 @@
     "typecheck": "tsc --noEmit",
     "knip": "knip --cache",
     "check": "nx run-many -t lint test typecheck convert knip",
+    "check:ci": "nx run-many --parallel=3 -t lint test typecheck convert knip",
     "check:watch": "pnpm check && nx watch --all -- pnpm check"
   },
   "dependencies": {
