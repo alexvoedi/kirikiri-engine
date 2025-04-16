@@ -25,3 +25,8 @@ export const GLOBALS = {
   },
   saveRegistry: () => null,
 }
+
+export const EngineEvent = {
+  CONTINUE: new CustomEvent('engine_continue'),
+  SUBROUTINE_CANCELLED: new CustomEvent('engine_subroutine_cancelled'),
+}

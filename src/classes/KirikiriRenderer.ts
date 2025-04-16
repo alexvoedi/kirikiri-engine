@@ -24,6 +24,12 @@ export class KirikiriRenderer {
       resizeTo: this.container,
     })
 
+    window.addEventListener('resize', () => {
+      Object.values(this.layers).forEach((layer) => {
+        layer.resize(this.app.screen.width, this.app.screen.height)
+      })
+    })
+
     this.container.appendChild(this.app.canvas)
 
     const baseLayer = new KirikiriLayer(this.app, 'base')

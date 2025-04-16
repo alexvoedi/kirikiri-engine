@@ -3,46 +3,12 @@ import type { Game } from '../types/Game'
 import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
 import { createConsola } from 'consola'
 import { ZodError } from 'zod'
-import { buttonCommand } from '../commands/buttonCommand'
-import { callCommand } from '../commands/callCommand'
-import { changeLayerCountCommand } from '../commands/changeLayerCountCommand'
-import { characterPositionCommand } from '../commands/characterPositionCommand'
-import { clearMessageCommand } from '../commands/clearMessageCommand'
-import { clearTextCommand } from '../commands/clearTextCommand'
-import { copyFrontToBackLayerCommand } from '../commands/copyFrontToBackLayerCommand'
-import { delayCommand } from '../commands/delayCommand'
-import { embeddedTagCommand } from '../commands/embeddedTagCommand'
-import { evalCommand } from '../commands/evalCommand'
-import { fadeBackgroundMusicInCommand } from '../commands/fadeBackgroundMusicInCommand'
-import { fadeOutBackgroundMusicCommand } from '../commands/fadeOutBackgroundMusic'
-import { historyCommand } from '../commands/historyCommand'
+import { getCommand } from '../commands/getCommand'
 import { ifCommand } from '../commands/ifCommand'
-import { imageCommand } from '../commands/imageCommand'
-import { jumpCommand } from '../commands/jumpCommand'
-import { layerOptionCommand } from '../commands/layerOptionCommand'
-import { loadPluginCommand } from '../commands/loadPluginCommand'
 import { createMacro } from '../commands/macroCommand'
-import { moveCommand } from '../commands/moveCommand'
-import { playBackgroundMusicCommand } from '../commands/playBackgroundMusicCommand'
-import { playSoundEffectCommand } from '../commands/playSoundEffectCommand'
-import { positionCommand } from '../commands/positionCommand'
-import { releaseLayerImageCommand } from '../commands/releaseLayerImageCommand'
-import { resetWaitCommand } from '../commands/resetWaitCommand'
-import { rightClickCommand } from '../commands/rightClickCommand'
-import { scenarioExitCommand } from '../commands/scenarioExitCommand'
 import { scriptCommand } from '../commands/scriptCommand'
-import { stopBackgroundMusicCommand } from '../commands/stopBackgroundMusicCommand'
-import { stopSoundEffectCommand } from '../commands/stopSoundEffectCommand'
-import { styleCommand } from '../commands/styleCommand'
-import { transitionCommand } from '../commands/transitionCommand'
-import { waitCommand } from '../commands/waitCommand'
-import { waitForBackgroundMusicCommand } from '../commands/waitForBackgroundMusicCommand'
-import { waitForClickCommand } from '../commands/waitForClickCommand'
-import { waitForMoveCommand } from '../commands/waitForMoveCommand'
-import { waitForSoundEffectCommand } from '../commands/waitForSoundEffectCommand'
-import { waitForTextClickCommand } from '../commands/waitForTextClickCommand'
-import { waitForTransitionCommand } from '../commands/waitForTransitionCommand'
-import { COMMAND_BLOCKS } from '../constants'
+import { COMMAND_BLOCKS, EngineEvent } from '../constants'
+import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
@@ -91,7 +57,15 @@ export class KirikiriEngine {
    */
   readonly subroutines: Record<string, string[]> = {}
 
-  timestamp: number = 0
+  /**
+   * Current subroutine
+   */
+  currentSubroutine: string | null = null
+
+  /**
+   * State
+   */
+  private state: EngineState = EngineState.UNINITIALIZED
 
   /**
    * Global script context.
@@ -182,6 +156,8 @@ export class KirikiriEngine {
         date: true,
       },
     })
+
+    this.state = EngineState.INITIALIZED
   }
 
   async run() {
@@ -190,6 +166,9 @@ export class KirikiriEngine {
     const lines = await this.loadFile(this.game.entry)
 
     await this.registerAllSubroutines(lines)
+
+    this.state = EngineState.RUNNING
+
     await this.runLines(lines)
 
     // this.printCommandCallCount()
@@ -270,7 +249,7 @@ export class KirikiriEngine {
           throw new Error(`Could not find end of subroutine for ${line} at line ${index + 1}`)
         }
 
-        const match = line.match(/^\*(.+)/) // find the name of the subroutine
+        const match = /^\*(.+)/.exec(line) // find the name of the subroutine
 
         if (!match) {
           throw new Error(`Invalid jump point line: ${line}`)
@@ -295,6 +274,24 @@ export class KirikiriEngine {
    */
   async runLines(lines: string[], index = 0): Promise<void> {
     do {
+      if (this.state === EngineState.PAUSED) {
+        await new Promise<void>((resolve) => {
+          window.addEventListener(EngineEvent.CONTINUE.type, () => {
+            resolve()
+          })
+        })
+      }
+
+      if (this.state === EngineState.CANCEL_SUBROUTINE) {
+        this.state = EngineState.RUNNING
+
+        window.dispatchEvent(EngineEvent.SUBROUTINE_CANCELLED)
+
+        this.currentSubroutine = null
+
+        return
+      }
+
       const line = lines[index]
 
       const firstCharacter = line.charAt(0)
@@ -302,6 +299,8 @@ export class KirikiriEngine {
       try {
         switch (firstCharacter) {
           case '*': {
+            this.currentSubroutine = line.slice(1).trim()
+
             index += 1
 
             break
@@ -345,7 +344,6 @@ export class KirikiriEngine {
                   break
                 }
                 case 'link': {
-                  // todo
                   break
                 }
                 case 'if': {
@@ -363,7 +361,7 @@ export class KirikiriEngine {
             }
             else {
               try {
-                const commandFunction = this.getCommand(command)
+                const commandFunction = getCommand(command)
 
                 await commandFunction(this, props)
               }
@@ -412,12 +410,6 @@ export class KirikiriEngine {
     } while (index < lines.length)
   }
 
-  logLineWithTimestamp(line: string) {
-    const timestamp = Date.now()
-    this.logger.debug(timestamp - this.timestamp, line)
-    this.timestamp = timestamp
-  }
-
   async renderText(text: string) {
     const renderSpeed = 40
 
@@ -451,7 +443,7 @@ export class KirikiriEngine {
               await macro(props)
             }
             else {
-              const commandFunction = this.getCommand(command)
+              const commandFunction = getCommand(command)
 
               if (commandFunction) {
                 await commandFunction(this, props)
@@ -496,140 +488,57 @@ export class KirikiriEngine {
     })
   }
 
-  getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {
-    switch (command) {
-      case 'image': {
-        return imageCommand
-      }
-      case 'position': {
-        return positionCommand
-      }
-      case 'trans': {
-        return transitionCommand
-      }
-      case 'wt': {
-        return waitForTransitionCommand
-      }
-      case 'ct': {
-        return clearTextCommand
-      }
-      case 'jump': {
-        return jumpCommand
-      }
-      case 'eval': {
-        return evalCommand
-      }
-      case 'wait': {
-        return waitCommand
-      }
-      case 'playse': {
-        return playSoundEffectCommand
-      }
-      case 'ws': {
-        return waitForSoundEffectCommand
-      }
-      case 'l': {
-        return waitForTextClickCommand
-      }
-      case 'move': {
-        return moveCommand
-      }
-      case 'cm': {
-        return clearMessageCommand
-      }
-      case 'waitclick': {
-        return waitForClickCommand
-      }
-      case 'stopse': {
-        return stopSoundEffectCommand
-      }
-      case 'style': {
-        return styleCommand
-      }
-      case 'delay': {
-        return delayCommand
-      }
-      case 'history': {
-        return historyCommand
-      }
-      case 'button': {
-        return buttonCommand
-      }
-      case 's': {
-        return scenarioExitCommand
-      }
-      case 'freeimage': {
-        return releaseLayerImageCommand
-      }
-      case 'layopt': {
-        return layerOptionCommand
-      }
-      case 'backlay': {
-        return copyFrontToBackLayerCommand
-      }
-      case 'resetwait': {
-        return resetWaitCommand
-      }
-      case 'emb': {
-        return embeddedTagCommand
-      }
-      case 'locate': {
-        return characterPositionCommand
-      }
-      case 'laycount': {
-        return changeLayerCountCommand
-      }
-      case 'call': {
-        return callCommand
-      }
-      case 'loadplugin': {
-        return loadPluginCommand
-      }
-      case 'fgzoom': {
-        // TODO: find out what this does
-        return async () => { }
-      }
-      case 'wfgzoom': {
-        // TODO: find out what this does
-        return async () => { }
-      }
-      case 'fadeinbgm': {
-        return fadeBackgroundMusicInCommand
-      }
-      case 'playbgm': {
-        return playBackgroundMusicCommand
-      }
-      case 'rclick': {
-        return rightClickCommand
-      }
-      case 'wl': {
-        return waitForBackgroundMusicCommand
-      }
-      case 'stopbgm': {
-        return stopBackgroundMusicCommand
-      }
-      case 'wm': {
-        return waitForMoveCommand
-      }
-      case 'fadeoutbgm': {
-        return fadeOutBackgroundMusicCommand
-      }
+  /**
+   * Runs the specified subroutine. If `force` is true, it will cancel the current subroutine.
+   */
+  async runSubroutine(name: string, options?: {
+    file?: string
+    force?: boolean
+  }) {
+    if (options?.file) {
+      const lines = await this.loadFile(options.file)
+
+      await this.registerAllSubroutines(lines)
     }
 
-    throw new UnknownCommandError(command)
-  }
-
-  async runSubroutine(name: string) {
     const subroutine = this.subroutines[name]
 
     if (!subroutine) {
-      // ignore for now
-      // throw new Error(`Subroutine ${name} not found`)
+      this.logger.warn(`Subroutine ${name} not found`)
       return
+    }
+
+    if (this.currentSubroutine && options?.force) {
+      await new Promise<void>((resolve) => {
+        const onCancelled = () => {
+          this.logger.info(`Cancelled subroutine ${this.currentSubroutine}`)
+
+          window.removeEventListener(EngineEvent.SUBROUTINE_CANCELLED.type, onCancelled)
+          resolve()
+        }
+
+        window.addEventListener(EngineEvent.SUBROUTINE_CANCELLED.type, onCancelled)
+
+        this.state = EngineState.CANCEL_SUBROUTINE
+      })
     }
 
     this.logger.info(`Running subroutine ${name}`)
 
     await this.runLines(subroutine)
+  }
+
+  getState() {
+    return this.state
+  }
+
+  setState(state: EngineState) {
+    this.state = state
+
+    if (state === EngineState.RUNNING) {
+      window.dispatchEvent(EngineEvent.CONTINUE)
+    }
+
+    this.logger.debug(`Engine state changed to: ${state}`)
   }
 }

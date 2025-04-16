@@ -5,6 +5,7 @@ import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { getPlacholders } from '../utils/getPlaceholders'
+import { getCommand } from './getCommand'
 import { ifCommand } from './ifCommand'
 import { scriptCommand } from './scriptCommand'
 
@@ -118,7 +119,7 @@ function processLines(engine: KirikiriEngine, lines: string[]) {
           }
           else {
             try {
-              const commandFunction = engine.getCommand(command)
+              const commandFunction = getCommand(command)
               const callback = (replacedProps: Record<string, string>): Promise<void> => commandFunction(engine, { ...props, ...replacedProps })
               processedLines.commands.push(callback)
 
