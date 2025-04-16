@@ -14,8 +14,6 @@ on:
 
 env:
   HUSKY: 0
-  NX_BASE: main
-  NX_HEAD: ${{ github.sha }}
 
 jobs:
   check:
