@@ -66,7 +66,7 @@ jobs:
         run: |
           pnpm build
 
-      - run: pnpm exec nx affected -t lint test typecheck convert knip
+      - run: pnpm exec nx affected --parallel=3 -t lint:ci test typecheck convert knip:ci
 
   sonarqube:
     runs-on: ubuntu-latest

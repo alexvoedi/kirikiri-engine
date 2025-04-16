@@ -34,13 +34,14 @@
     "dev": "tsup --watch",
     "build": "tsup",
     "lint": "eslint . --cache",
+    "lint:ci": "eslint .",
     "lint:fix": "eslint . --fix",
     "test": "CI=0 FORCE_COLOR=1 vitest --watch --coverage",
     "prepare": "husky",
     "typecheck": "tsc --noEmit",
     "knip": "knip --cache",
+    "knip:ci": "knip",
     "check": "nx run-many -t lint test typecheck convert knip",
-    "check:ci": "nx run-many --parallel=3 -t lint test typecheck convert knip",
     "check:watch": "pnpm check && nx watch --all -- pnpm check"
   },
   "dependencies": {
@@ -53,7 +54,6 @@
   "devDependencies": {
     "@antfu/eslint-config": "^4.12.0",
     "@nx/eslint": "20.7.2",
-    "@nx/vite": "20.7.2",
     "@types/lodash": "^4.17.16",
     "@types/node": "^22.14.1",
     "@vitest/coverage-istanbul": "^3.1.1",
