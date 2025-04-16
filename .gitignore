@@ -1,4 +1,26 @@
-dist
-node_modules
-.env
-coverage
+# Node modules
+node_modules/
+
+# Build directories
+dist/
+build/
+out/
+coverage/
+.tmp/
+.cache/
+
+# Husky
+.husky/_/.gitignore
+
+# Nx
+.nx/cache/
+.nx/workspace-data/
+
+# Miscellaneous
+*.env
+*.local
+*.env.local
+*.env.*.local
+
+# Cache
+.eslintcache

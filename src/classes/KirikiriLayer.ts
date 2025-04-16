@@ -1,8 +1,7 @@
 import type { Application, Renderable } from 'pixi.js'
-import { merge } from 'lodash'
 import { Container } from 'pixi.js'
 
-export interface KirikiriLayerAttributes {
+interface KirikiriLayerAttributes {
   left?: number
   top?: number
   width?: number
@@ -91,7 +90,9 @@ export class KirikiriLayer extends Container {
   /**
    * Moves the layer and changes its opacity over a specified time.
    *
-   * @param time - The total time in milliseconds for the movement and opacity change.
+   * @param time - An object containing the total time and the movement path.
+   * @param time.time - The total time in milliseconds for the movement and opacity change.
+   * @param time.path - An array of points defining the movement path, each with x, y, and opacity.
    */
   moveAndChangeOpacity({ time, path }: {
     time: number

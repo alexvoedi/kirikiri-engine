@@ -6,15 +6,6 @@ export const COMMAND_BLOCKS: Record<string, string> = {
   indent: 'endindent',
 }
 
-export const FILE_EXTENSIONS = [
-  'png',
-  'txt',
-  'jpg',
-  'ogg',
-  'mp4',
-  'tlg',
-]
-
 // The game ready this value from the registry. Initially it must be != 55 to avoid a timeout. After it was read once it must be 55 because that is the required value to start the game.
 let REGISTY_VALUE = 54
 

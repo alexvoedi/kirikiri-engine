@@ -39,7 +39,7 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
       time: number
     }>
 
-    const fadeOutTime = customEvent.detail.time
+    const _fadeOutTime = customEvent.detail.time
 
     audio.volume = 0
 

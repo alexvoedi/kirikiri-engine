@@ -37,7 +37,8 @@ export async function fadeBackgroundMusicInCommand(engine: KirikiriEngine, props
         audio.volume = 1
         clearInterval(fadeInterval)
         resolve()
-      } else {
+      }
+      else {
         audio.volume += volumeStep
       }
     }, fadeStep)

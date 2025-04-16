@@ -14,6 +14,7 @@ import { delayCommand } from '../commands/delayCommand'
 import { embeddedTagCommand } from '../commands/embeddedTagCommand'
 import { evalCommand } from '../commands/evalCommand'
 import { fadeBackgroundMusicInCommand } from '../commands/fadeBackgroundMusicInCommand'
+import { fadeOutBackgroundMusicCommand } from '../commands/fadeOutBackgroundMusic'
 import { historyCommand } from '../commands/historyCommand'
 import { ifCommand } from '../commands/ifCommand'
 import { imageCommand } from '../commands/imageCommand'
@@ -609,6 +610,9 @@ export class KirikiriEngine {
       }
       case 'wm': {
         return waitForMoveCommand
+      }
+      case 'fadeoutbgm': {
+        return fadeOutBackgroundMusicCommand
       }
     }
 
