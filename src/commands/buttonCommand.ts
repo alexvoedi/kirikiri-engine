@@ -5,6 +5,7 @@ const schema = z.object({
   graphic: z.string(),
   target: z.string().optional(),
   recthit: z.string().transform(value => value === 'true').optional(),
+  cond: z.string().optional(),
 }).strict()
 
 export async function buttonCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
