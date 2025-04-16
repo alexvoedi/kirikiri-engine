@@ -12,7 +12,7 @@ const schema = z.object({
   /**
    * The name of the layer of the image. `base` is the background layer. All other values are layers in the foreground.
    */
-  layer: z.union([z.literal('base'), createIntegerSchema(0)]),
+  layer: z.string(),
   left: createIntegerSchema().optional(),
   opacity: createIntegerSchema(0, 255).optional(),
   /**

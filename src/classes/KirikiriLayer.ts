@@ -22,9 +22,9 @@ export class KirikiriLayer extends Container {
     label: 'fore',
   })
 
-  constructor(private readonly app: Application, readonly layer: string | number) {
+  constructor(private readonly app: Application, readonly label: string) {
     super({
-      label: `${layer}`,
+      label,
     })
 
     this.addChild(this.back)
@@ -72,7 +72,6 @@ export class KirikiriLayer extends Container {
 
       this.fore.removeChildren()
       this.back.children.forEach(child => this.fore.addChild(child))
-      this.back.removeChildren()
 
       this.fore.alpha = 1
     }
@@ -99,8 +98,8 @@ export class KirikiriLayer extends Container {
   }
 
   reset() {
-    this.back.removeChildren()
-    this.fore.removeChildren()
+    // this.back.removeChildren()
+    // this.fore.removeChildren()
   }
 
   /**
@@ -202,7 +201,7 @@ export class KirikiriLayer extends Container {
   }
 
   copyFrontToBack() {
-    this.back.removeChildren()
+    // this.back.removeChildren()
     this.fore.children.forEach(child => this.back.addChild(child))
   }
 }

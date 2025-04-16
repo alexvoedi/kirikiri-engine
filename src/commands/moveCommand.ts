@@ -1,11 +1,11 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
-import { createAlphanumericSchema, createIntegerSchema } from '../schemas/zod'
+import { createIntegerSchema } from '../schemas/zod'
 import { transformMoveInstruction } from '../utils/transformMoveInstruction'
 
 const schema = z.object({
-  layer: createAlphanumericSchema(),
+  layer: z.string(),
   time: createIntegerSchema(),
   path: z.string().transform(transformMoveInstruction),
 }).strict()

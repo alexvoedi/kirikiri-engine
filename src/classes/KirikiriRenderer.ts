@@ -1,18 +1,14 @@
-import { Application, Assets, Rectangle, Sprite, Text, Texture } from 'pixi.js'
+import { Application, Assets, Container, Rectangle, Sprite, Text, Texture } from 'pixi.js'
 import { EngineEvent } from '../constants'
 import { KirikiriLayer } from './KirikiriLayer'
 
 export class KirikiriRenderer {
   private readonly app: Application
-  private layers!: {
-    base: KirikiriLayer
-    front: KirikiriLayer
-    message: KirikiriLayer
-    3: KirikiriLayer
-    message0: KirikiriLayer
-  } & Record<string, KirikiriLayer>
 
-  private textElement!: Text
+  private base!: KirikiriLayer
+  private front!: Container<KirikiriLayer>
+  private message0!: KirikiriLayer
+  private message1!: KirikiriLayer
 
   private readonly location: {
     x: number
@@ -34,54 +30,29 @@ export class KirikiriRenderer {
     })
 
     window.addEventListener('resize', () => {
-      Object.values(this.layers).forEach((layer) => {
+      this.getLayersArr().forEach((layer) => {
         layer.resize(this.app.screen.width, this.app.screen.height)
       })
     })
 
     this.container.appendChild(this.app.canvas)
 
-    const baseLayer = new KirikiriLayer(this.app, 'base')
-    this.app.stage.addChild(baseLayer)
+    this.base = new KirikiriLayer(this.app, 'base')
+    this.app.stage.addChild(this.base)
 
-    const frontLayer = new KirikiriLayer(this.app, 'front')
-    this.app.stage.addChild(frontLayer)
+    this.front = new Container<KirikiriLayer>({ label: 'front' })
+    this.app.stage.addChild(this.front)
 
-    const messageLayer = new KirikiriLayer(this.app, 'message')
-    this.app.stage.addChild(messageLayer)
+    this.message0 = new KirikiriLayer(this.app, 'message0')
+    this.app.stage.addChild(this.message0)
 
-    const message3Layer = new KirikiriLayer(this.app, 3)
-    this.app.stage.addChild(message3Layer)
-
-    const message0Layer = new KirikiriLayer(this.app, 'message0')
-    this.app.stage.addChild(message0Layer)
-
-    this.layers = {
-      base: baseLayer,
-      front: frontLayer,
-      message: messageLayer,
-      message0: message0Layer,
-      3: message3Layer,
-    }
-
-    this.textElement = new Text({
-      text: 'dummy',
-      style: {
-        fontSize: this.app.screen.height / 35,
-        fill: 0xFFFFFF,
-        fontFamily: 'Kiwi Maru',
-        wordWrap: true,
-        breakWords: true,
-        wordWrapWidth: this.app.screen.width,
-      },
-    })
-
-    message0Layer.setPage('fore', this.textElement)
+    this.message1 = new KirikiriLayer(this.app, 'message1')
+    this.app.stage.addChild(this.message1)
   }
 
   async setImage(data: {
     file: string
-    layer: string | number
+    layer: string
     page: 'back' | 'fore'
     x?: number
     y?: number
@@ -95,6 +66,7 @@ export class KirikiriRenderer {
 
     sprite.width = this.app.screen.width
     sprite.height = this.app.screen.height
+    sprite.label = file
 
     const layerGroup = this.getOrCreateLayer(layer)
     layerGroup.setPage(
@@ -106,28 +78,33 @@ export class KirikiriRenderer {
     )
   }
 
-  getOrCreateLayer(layer: string | number) {
-    if (layer === 'message') {
-      return this.layers.message
+  getLayersArr() {
+    return [this.base, ...this.front.children, this.message0, this.message1]
+  }
+
+  getOrCreateLayer(layer: string): KirikiriLayer {
+    switch (layer) {
+      case 'base':
+        return this.base
+      case 'message0':
+        return this.message0
+      case 'message1':
+        return this.message1
+      default: {
+        const existingLayer = this.front.children.find(child => child.label === `${layer}`)
+
+        if (existingLayer) {
+          return existingLayer
+        }
+        else {
+          const newLayer = new KirikiriLayer(this.app, layer)
+
+          this.front.addChild(newLayer)
+
+          return newLayer
+        }
+      }
     }
-
-    if (layer === 'message0') {
-      return this.layers.message0
-    }
-
-    if (layer === 3) {
-      return this.layers[3]
-    }
-
-    if (!this.layers[layer]) {
-      const newLayer = new KirikiriLayer(this.app, layer)
-
-      this.layers.front.addChild(newLayer)
-
-      this.layers[layer] = newLayer
-    }
-
-    return this.layers[layer]
   }
 
   transition(transitionName: 'universal' | 'scroll' | 'crossfade' | 'turn' | 'rotatezoom', options: {
@@ -136,7 +113,7 @@ export class KirikiriRenderer {
   }) {
     const fadeStep = 1000 / (options.time * 60)
 
-    const layers = [this.layers.base, this.layers.front]
+    const layers = this.getLayersArr()
 
     let timer = 1
     const iterate = (delta: { deltaTime: number }) => {
@@ -166,7 +143,7 @@ export class KirikiriRenderer {
   }
 
   setPosition(data: {
-    layer?: string | number
+    layer?: string
     page?: 'back' | 'fore'
     left?: number
     top?: number
@@ -203,7 +180,7 @@ export class KirikiriRenderer {
   }
 
   setLayerOptions(data: {
-    layer: string | number
+    layer: string
     page: 'back' | 'fore'
     visible?: boolean
     autohide?: boolean
@@ -222,21 +199,43 @@ export class KirikiriRenderer {
   }
 
   setText(text: string) {
-    this.textElement.text = text
+    const textElement = this.message0.fore.getChildByLabel('textelement') as Text
+
+    if (textElement) {
+      textElement.text = text
+    }
+    else {
+      const textElement = new Text({
+        text,
+        label: 'textelement',
+        style: {
+          fontSize: this.app.screen.height / 35,
+          fill: 0xFFFFFF,
+          fontFamily: 'Kiwi Maru',
+          wordWrap: true,
+          breakWords: true,
+          wordWrapWidth: this.app.screen.width,
+        },
+      })
+
+      this.message0.setPage('fore', textElement)
+    }
   }
 
   /**
    * Remove all children from the fore and back of all message layers.
    */
   clearMessageLayers() {
-    this.layers.message.fore.removeChildren()
-    this.layers.message.back.removeChildren()
+    // [this.message0, this.message1].forEach((layer) => {
+    //   layer.fore.removeChildren()
+    //   layer.back.removeChildren()
+    // })
   }
 
   /**
    * Remove all children from the specified layer.
    */
-  clearLayer(layer: string | number, page?: 'back' | 'fore') {
+  clearLayer(layer: string, page?: 'back' | 'fore') {
     const layerGroup = this.getOrCreateLayer(layer)
 
     if (page) {
@@ -252,17 +251,15 @@ export class KirikiriRenderer {
    * Clear text command
    */
   clearText() {
-    this.textElement.text = ''
-    this.layers[3].alpha = 0
-    this.layers[3].back.removeChildren()
-    this.layers[3].fore.removeChildren()
+    this.message0.back.removeChildren()
+    this.message0.fore.removeChildren()
   }
 
   /**
    * Move and change the opacity
    */
   moveAndChangeOpacity({ layer, ...rest }: {
-    layer: string | number
+    layer: string
     time: number
     path: Array<{
       x: number
@@ -345,30 +342,50 @@ export class KirikiriRenderer {
       await data.callback()
     })
 
-    this.layers.message.fore.addChild(buttonNormal)
+    this.message0.fore.addChild(buttonNormal)
   }
 
   clearMessageLayerPages() {
-    this.layers.message.fore.removeChildren()
-    this.layers.message.back.removeChildren()
+    // this.message0.fore.removeChildren()
+    // this.message0.back.removeChildren()
 
-    this.layers.message0.fore.removeChildren()
-    this.layers.message0.back.removeChildren()
+    // this.message1.fore.removeChildren()
+    // this.message1.back.removeChildren()
   }
 
   /**
    * Copy front to back page
    */
-  copyFrontToBack(layer?: string | number) {
+  copyFrontToBack(layer?: string) {
     if (layer) {
       const layerGroup = this.getOrCreateLayer(layer)
 
       layerGroup.copyFrontToBack()
     }
     else {
-      Object.values(this.layers).forEach((layerGroup) => {
+      this.getLayersArr().forEach((layerGroup) => {
         layerGroup.copyFrontToBack()
       })
     }
+  }
+
+  /**
+   * This function recursively traverses the entire tree of the app stage and logs the name and type of each child.
+   */
+  debugFullTree() {
+    const tree: string[] = []
+
+    const traverse = (node: any, depth: number) => {
+      const indent = ' '.repeat(depth * 2)
+      tree.push(`${indent}${node.label} (${node.constructor.name})`)
+
+      node.children.forEach((child: any) => {
+        traverse(child, depth + 1)
+      })
+    }
+
+    traverse(this.app.stage, 0)
+
+    console.log(tree.join('\n'))
   }
 }
