@@ -275,6 +275,8 @@ export class KirikiriEngine {
 
       const line = lines[index]
 
+      console.log(line)
+
       const firstCharacter = line.charAt(0)
 
       try {

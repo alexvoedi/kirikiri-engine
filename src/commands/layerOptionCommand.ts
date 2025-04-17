@@ -4,7 +4,7 @@ import { createBooleanSchema, createIntegerSchema } from '../schemas/zod'
 
 const schema = z.object({
   layer: z.string(),
-  page: z.enum(['fore', 'back']),
+  page: z.enum(['fore', 'back']).optional().default('fore'),
   visible: createBooleanSchema().optional(),
   autohide: createBooleanSchema().optional(),
   index: createIntegerSchema(0).optional(),

@@ -12,18 +12,22 @@ import { deleteMessageLayerChildrenCommand } from './deleteMessageLayerChildrenC
 import { embeddedTagCommand } from './embeddedTagCommand'
 import { evalCommand } from './evalCommand'
 import { fadeOutBackgroundMusicCommand } from './fadeOutBackgroundMusic'
+import { fontCommand } from './fontCommand'
 import { historyCommand } from './historyCommand'
 import { imageCommand } from './imageCommand'
 import { jumpCommand } from './jumpCommand'
 import { layerOptionCommand } from './layerOptionCommand'
 import { loadPluginCommand } from './loadPluginCommand'
 import { moveCommand } from './moveCommand'
+import { pauseBackgroundMusicCommand } from './pauseBackgroundMusicCommand'
 import { playBackgroundMusicCommand } from './playBackgroundMusicCommand'
 import { playSoundEffectCommand } from './playSoundEffectCommand'
 import { playVideoCommand } from './playVideoCommand'
 import { positionCommand } from './positionCommand'
+import { quakeCommand } from './quakeCommand'
 import { releaseLayerImageCommand } from './releaseLayerImageCommand'
 import { resetWaitCommand } from './resetWaitCommand'
+import { resumeBackgroundMusicCommand } from './resumeBackgroundMusicCommand'
 import { rightClickCommand } from './rightClickCommand'
 import { scenarioExitCommand } from './scenarioExitCommand'
 import { startanchorCommand } from './startanchorCommand'
@@ -85,6 +89,10 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   er: deleteMessageLayerChildrenCommand,
   stoptrans: stopTransitionCommand,
   startanchor: startanchorCommand,
+  font: fontCommand,
+  pausebgm: pauseBackgroundMusicCommand,
+  resumebgm: resumeBackgroundMusicCommand,
+  quake: quakeCommand,
 }
 
 export function getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {

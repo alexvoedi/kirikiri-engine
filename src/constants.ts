@@ -44,6 +44,7 @@ export const GLOBAL_SCRIPT_CONTEXT = {
       remove: () => null,
     },
     stopAllTransitions: () => null,
+    clickCount: 0,
   },
   sf: {
     firstclear: 0,
@@ -63,4 +64,7 @@ export const EngineEvent = {
   FADEOUT_BGM: 'fadeoutbgm',
   TRANSITION_ENDED: 'wt',
   TEXT_CLICK: 'text_click',
+  CLICK: 'click',
+  PAUSE_BGM: 'pausebgm',
+  RESUME_BGM: 'resumebgm',
 }

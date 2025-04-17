@@ -12,5 +12,5 @@ const schema = z.object({
 export async function startanchorCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  engine.logger.warn('Unimplemented command', 'buttonCommand')
+  engine.logger.warn('Unimplemented command', 'startanchor')
 }

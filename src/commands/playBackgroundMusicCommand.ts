@@ -2,11 +2,11 @@ import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
 import { EngineEvent } from '../constants'
-import { createIntegerSchema } from '../schemas/zod'
+import { createBooleanSchema, createIntegerSchema } from '../schemas/zod'
 
 const schema = z.object({
   storage: z.string(),
-  loop: z.string().transform(value => value === 'true').optional(),
+  loop: createBooleanSchema().optional().default(true),
   time: createIntegerSchema().optional(),
 }).strict()
 
@@ -67,6 +67,14 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
   }
 
   window.addEventListener(EngineEvent.FADEOUT_BGM, onFadeOut)
+
+  window.addEventListener(EngineEvent.PAUSE_BGM, () => {
+    audio.pause()
+  })
+
+  window.addEventListener(EngineEvent.RESUME_BGM, () => {
+    audio.play()
+  })
 
   window.addEventListener('stopbgm', () => {
     audio.pause()

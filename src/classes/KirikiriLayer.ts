@@ -1,5 +1,5 @@
 import type { Application, Renderable } from 'pixi.js'
-import { Container } from 'pixi.js'
+import { Container, Sprite, Text } from 'pixi.js'
 
 interface KirikiriLayerAttributes {
   left?: number
@@ -95,6 +95,8 @@ export class KirikiriLayer extends Container {
       this.visible = data.visible
     if (data.index !== undefined)
       this.zIndex = data.index
+    if (data.visible !== undefined)
+      this.visible = data.visible
   }
 
   reset() {
@@ -200,8 +202,45 @@ export class KirikiriLayer extends Container {
     return start + (end - start) * factor
   }
 
+  /**
+   * Copies all children from the front layer to the back layer. Does not remove them from the front layer.
+   */
   copyFrontToBack() {
-    // this.back.removeChildren()
-    this.fore.children.forEach(child => this.back.addChild(child))
+    this.back.removeChildren()
+
+    this.fore.children.forEach((child) => {
+      const clone = this.cloneDisplayObject(child as Renderable)
+      this.back.addChild(clone)
+    })
+  }
+
+  private cloneDisplayObject(obj: Renderable): Renderable {
+    const clone = new (obj.constructor as new () => Renderable)()
+
+    // Copy properties
+    clone.position.copyFrom(obj.position)
+    clone.scale.copyFrom(obj.scale)
+    clone.rotation = obj.rotation
+    clone.alpha = obj.alpha
+    clone.visible = obj.visible
+    clone.pivot.copyFrom(obj.pivot)
+
+    // If it is a sprite it should also copy the texture
+    if (obj instanceof Sprite) {
+      (clone as Sprite).texture = obj.texture
+    }
+
+    // If it is a text object, copy the text
+    if (obj instanceof Text) {
+      (clone as Text).text = obj.text
+    }
+
+    // Recursively clone children
+    obj.children.forEach((child) => {
+      const childClone = this.cloneDisplayObject(child as Renderable)
+      clone.addChild(childClone)
+    })
+
+    return clone
   }
 }
