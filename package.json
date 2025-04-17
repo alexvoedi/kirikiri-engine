@@ -40,7 +40,7 @@
     "test:watch": "CI=0 FORCE_COLOR=1 vitest --watch",
     "prepare": "husky",
     "typecheck": "tsc --noEmit",
-    "knip": "knip --cache",
+    "knip": "knip",
     "knip:ci": "knip --production",
     "check": "nx run-many -t lint test typecheck convert knip",
     "check:watch": "pnpm check && nx watch --all -- pnpm check"

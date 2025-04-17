@@ -6,6 +6,7 @@ import { changeLayerCountCommand } from './changeLayerCountCommand'
 import { characterPositionCommand } from './characterPositionCommand'
 import { clearMessageCommand } from './clearMessageCommand'
 import { clearTextCommand } from './clearTextCommand'
+import { clickSkipCommand } from './clickSkipCommand'
 import { copyFrontToBackLayerCommand } from './copyFrontToBackLayerCommand'
 import { delayCommand } from './delayCommand'
 import { deleteMessageLayerChildrenCommand } from './deleteMessageLayerChildrenCommand'
@@ -93,6 +94,7 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   pausebgm: pauseBackgroundMusicCommand,
   resumebgm: resumeBackgroundMusicCommand,
   quake: quakeCommand,
+  clickskip: clickSkipCommand,
 }
 
 export function getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {

@@ -5,24 +5,15 @@ import { createBooleanSchema, createGammaSchema, createIntegerSchema } from '../
 const schema = z.object({
   ggamma: createGammaSchema().optional(),
   grayscale: createBooleanSchema().optional(),
-  /**
-   * ???
-   */
   index: createIntegerSchema().default(0).optional(),
-  /**
-   * The name of the layer of the image. `base` is the background layer. All other values are layers in the foreground.
-   */
   layer: z.string(),
   left: createIntegerSchema().optional(),
   opacity: createIntegerSchema(0, 255).optional(),
-  /**
-   * Every image has two layers - back and fore. These two layers are used for transitions.
-   */
-  page: z.enum(['back', 'fore']).optional(),
+  page: z.enum(['back', 'fore']).optional().default('fore'),
   rgamma: createGammaSchema().optional(),
   storage: z.string(),
   top: createIntegerSchema().optional(),
-  visible: createBooleanSchema().default(false).optional(),
+  visible: createBooleanSchema().optional().default(true),
   bgamma: createGammaSchema().optional(),
 }).strict()
 
@@ -42,11 +33,6 @@ export async function imageCommand(engine: KirikiriEngine, props?: Record<string
 
   await engine.renderer.setImage({
     file,
-    layer: parsed.layer,
-    page: parsed.page ?? 'back',
-    opacity: parsed.opacity,
-    x: parsed.left,
-    y: parsed.top,
-    visible: parsed.visible,
+    ...parsed,
   })
 }

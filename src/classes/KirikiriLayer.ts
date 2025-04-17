@@ -1,4 +1,5 @@
-import type { Application, Renderable } from 'pixi.js'
+import type { Renderable } from 'pixi.js'
+import type { KirikiriRenderer } from './KirikiriRenderer'
 import { Container, Sprite, Text } from 'pixi.js'
 
 interface KirikiriLayerAttributes {
@@ -22,7 +23,7 @@ export class KirikiriLayer extends Container {
     label: 'fore',
   })
 
-  constructor(private readonly app: Application, readonly label: string) {
+  constructor(private readonly renderer: KirikiriRenderer, readonly label: string) {
     super({
       label,
     })
@@ -40,6 +41,9 @@ export class KirikiriLayer extends Container {
 
   setPage(page: 'back' | 'fore', element: Renderable, options?: {
     opacity?: number
+    visible?: boolean
+    x?: number
+    y?: number
   }) {
     const pageObj = this[page]
 
@@ -47,6 +51,15 @@ export class KirikiriLayer extends Container {
 
     if (options?.opacity !== undefined)
       this.alpha = options.opacity
+
+    if (options?.visible !== undefined)
+      this.visible = options.visible
+
+    if (options?.x !== undefined)
+      pageObj.x = this.renderer.scale * options.x
+
+    if (options?.y !== undefined)
+      pageObj.y = this.renderer.scale * options.y
 
     pageObj.addChild(element)
   }
@@ -56,12 +69,7 @@ export class KirikiriLayer extends Container {
   }
 
   stopTransition() {
-    // todo: fix this
-    // this.fore.removeChildren()
-    // this.back.children.forEach(child => this.fore.addChild(child))
-    // this.back.removeChildren()
-
-    // this.fore.alpha = 1
+    console.log('stothetransition')
   }
 
   fadeTransition(step: number, dt: number) {
@@ -83,9 +91,13 @@ export class KirikiriLayer extends Container {
     const page = this[data.page]
 
     if (data.left !== undefined)
-      page.x = (this.app.screen.width / 720) * data.left
+      page.x = this.renderer.scale * data.left
     if (data.top !== undefined)
-      page.y = (this.app.screen.height / 576) * data.top
+      page.y = this.renderer.scale * data.top
+    if (data.opacity !== undefined)
+      page.alpha = data.opacity
+    if (data.visible !== undefined)
+      page.visible = data.visible
   }
 
   setLayerAttributes(data: {
@@ -100,6 +112,7 @@ export class KirikiriLayer extends Container {
   }
 
   reset() {
+    console.log('RESEEEET')
     // this.back.removeChildren()
     // this.fore.removeChildren()
   }
@@ -156,11 +169,11 @@ export class KirikiriLayer extends Container {
           const waitForMoveNotifier = new CustomEvent('wm')
           window.dispatchEvent(waitForMoveNotifier)
 
-          this.app.ticker.remove(iterate)
+          this.renderer.app.ticker.remove(iterate)
         }
       }
 
-      this.app.ticker.add(iterate)
+      this.renderer.app.ticker.add(iterate)
       return
     }
 
@@ -191,11 +204,11 @@ export class KirikiriLayer extends Container {
           window.dispatchEvent(waitForMoveNotifier)
         }, time * 1000)
 
-        this.app.ticker.remove(iterate)
+        this.renderer.app.ticker.remove(iterate)
       }
     }
 
-    this.app.ticker.add(iterate)
+    this.renderer.app.ticker.add(iterate)
   }
 
   interpolate(start: number, end: number, factor: number) {
@@ -203,44 +216,40 @@ export class KirikiriLayer extends Container {
   }
 
   /**
-   * Copies all children from the front layer to the back layer. Does not remove them from the front layer.
+   * Copies all children properties from the front layer to the back layer. Does not remove them from the front layer.
    */
   copyFrontToBack() {
-    this.back.removeChildren()
+    for (const fore of this.fore.children) {
+      const data = {
+        label: fore.label,
+        position: fore.position,
+        scale: fore.scale,
+        rotation: fore.rotation,
+        alpha: fore.alpha,
+        visible: fore.visible,
+        pivot: fore.pivot,
+        x: fore.x,
+        y: fore.y,
+        blendMode: fore.blendMode,
+      }
 
-    this.fore.children.forEach((child) => {
-      const clone = this.cloneDisplayObject(child as Renderable)
-      this.back.addChild(clone)
-    })
-  }
+      if (fore instanceof Sprite) {
+        const back = new Sprite({
+          ...data,
+          texture: fore.texture,
+        })
 
-  private cloneDisplayObject(obj: Renderable): Renderable {
-    const clone = new (obj.constructor as new () => Renderable)()
+        this.back.addChild(back)
+      }
+      else if (fore instanceof Text) {
+        const back = new Text({
+          ...data,
+          text: fore.text,
+          style: fore.style,
+        })
 
-    // Copy properties
-    clone.position.copyFrom(obj.position)
-    clone.scale.copyFrom(obj.scale)
-    clone.rotation = obj.rotation
-    clone.alpha = obj.alpha
-    clone.visible = obj.visible
-    clone.pivot.copyFrom(obj.pivot)
-
-    // If it is a sprite it should also copy the texture
-    if (obj instanceof Sprite) {
-      (clone as Sprite).texture = obj.texture
+        this.back.addChild(back)
+      }
     }
-
-    // If it is a text object, copy the text
-    if (obj instanceof Text) {
-      (clone as Text).text = obj.text
-    }
-
-    // Recursively clone children
-    obj.children.forEach((child) => {
-      const childClone = this.cloneDisplayObject(child as Renderable)
-      clone.addChild(childClone)
-    })
-
-    return clone
   }
 }

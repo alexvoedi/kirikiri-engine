@@ -4,7 +4,7 @@ import { z } from 'zod'
 const schema = z.object({}).strict()
 
 /**
- * Implements the `waitclick` command.
+ * Implements the `l` command.
  *
  * Waits for a click.
  */

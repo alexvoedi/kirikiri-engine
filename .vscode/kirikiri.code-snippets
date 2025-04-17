@@ -18,23 +18,18 @@
 	"Create Kirikiri Command": {
     "prefix": "cmd",
     "body": [
-      "import type { KirikiriEngine } from '../KirikiriEngine'",
+      "import type { KirikiriEngine } from '../classes/KirikiriEngine'",
       "import { z } from 'zod'",
       "",
       "const schema = z.object({}).strict()",
       "",
-      "export function ${1:createCommandName}(_: KirikiriEngine, defaultProps?: Record<string, string>): (props?: Record<string, string>) => Promise<void> {",
-      "  return async (props?: Record<string, string>): Promise<void> => {",
-      "    schema.parse({",
-      "      ...defaultProps,",
-      "      ...props,",
-      "    })",
+      "export async function ${1:createCommandName}(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {",
+      "  const parsed = schema.parse(props)",
       "",
-      "    // todo",
-      "  }",
+      "  engine.logger.warn('Unimplemented command: clickSkipCommand', parsed)",
       "}",
       "$0"
     ],
     "description": "Scaffold a Kirikiri command."
-  }
+  },
 }

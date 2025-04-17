@@ -35,4 +35,7 @@ export interface CommandStorage {
   delay?: {
     speed?: 'nowait' | 'user' | number
   }
+  clickskip?: {
+    enabled?: boolean
+  }
 }

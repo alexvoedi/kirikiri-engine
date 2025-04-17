@@ -43,21 +43,3 @@ export function createGammaSchema() {
 export function createPageSchema() {
   return z.enum(['fore', 'back'])
 }
-
-/**
- * Can be a string or a number. If it is string that can be converted to a number, it will be converted.
- */
-export function createAlphanumericSchema() {
-  return z.union([
-    z.string().transform((value) => {
-      const num = Number(value)
-      return Number.isNaN(num) ? value : num
-    }),
-    z.number(),
-  ]).refine((value) => {
-    if (typeof value === 'string') {
-      return /^[\w.]+$/.test(value)
-    }
-    return true
-  }, { message: 'Value must be alphanumeric' })
-}

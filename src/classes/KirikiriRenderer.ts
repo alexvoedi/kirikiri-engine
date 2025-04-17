@@ -1,10 +1,9 @@
 import { Application, Assets, Container, Rectangle, Sprite, Text, Texture } from 'pixi.js'
 import { EngineEvent } from '../constants'
-import { clamp } from '../utils/clamp'
 import { KirikiriLayer } from './KirikiriLayer'
 
 export class KirikiriRenderer {
-  private readonly app: Application
+  readonly app: Application
 
   private base!: KirikiriLayer
   private front!: Container<KirikiriLayer>
@@ -38,17 +37,17 @@ export class KirikiriRenderer {
 
     this.container.appendChild(this.app.canvas)
 
-    this.base = new KirikiriLayer(this.app, 'base')
+    this.base = new KirikiriLayer(this, 'base')
     this.app.stage.addChild(this.base)
 
     this.front = new Container<KirikiriLayer>({ label: 'front' })
     this.front.sortableChildren = true
     this.app.stage.addChild(this.front)
 
-    this.message0 = new KirikiriLayer(this.app, 'message0')
+    this.message0 = new KirikiriLayer(this, 'message0')
     this.app.stage.addChild(this.message0)
 
-    this.message1 = new KirikiriLayer(this.app, 'message1')
+    this.message1 = new KirikiriLayer(this, 'message1')
     this.app.stage.addChild(this.message1)
   }
 
@@ -65,14 +64,15 @@ export class KirikiriRenderer {
     visible?: boolean
     opacity?: number
   }) {
-    const { file, layer, page, opacity } = data
+    const { file, layer, page, opacity, visible, x, y } = data
 
     const texture = await Assets.load(file)
-    const sprite = new Sprite(texture)
-
-    sprite.width = this.app.screen.width
-    sprite.height = this.app.screen.height
-    sprite.label = file
+    const sprite = new Sprite({
+      texture,
+      width: this.app.screen.width,
+      height: this.app.screen.height,
+      label: file,
+    })
 
     const layerGroup = this.getOrCreateLayer(layer)
     layerGroup.setPage(
@@ -80,6 +80,9 @@ export class KirikiriRenderer {
       sprite,
       {
         opacity,
+        visible,
+        x,
+        y,
       },
     )
   }
@@ -103,7 +106,7 @@ export class KirikiriRenderer {
           return existingLayer
         }
         else {
-          const newLayer = new KirikiriLayer(this.app, layer)
+          const newLayer = new KirikiriLayer(this, layer)
 
           // if layer can be converted to a number, the number is used as the zindex
           const zIndex = Number(layer)
@@ -125,6 +128,7 @@ export class KirikiriRenderer {
     time: number
     children?: boolean
   }) {
+    console.log(this.getTreeString())
     const fadeStep = 1000 / (options.time * 60)
 
     const layers = this.getLayersArr()
@@ -273,11 +277,8 @@ export class KirikiriRenderer {
     const startY = this.app.stage.y
 
     const shake = (delta: { deltaTime: number }) => {
-      const offsetX = Math.random() * hmax - hmax / 2
-      const offsetY = Math.random() * vmax - vmax / 2
-
-      this.app.stage.x = clamp(startX - hmax, startX + hmax, startX + offsetX)
-      this.app.stage.y = clamp(startY - vmax, startY + vmax, startY + offsetY)
+      this.app.stage.x = Math.random() * hmax
+      this.app.stage.y = Math.random() * vmax
 
       timer -= (delta.deltaTime * 10)
 
@@ -295,10 +296,15 @@ export class KirikiriRenderer {
    * Remove all children from the fore and back of all message layers.
    */
   clearMessageLayers() {
-    // [this.message0, this.message1].forEach((layer) => {
-    //   layer.fore.removeChildren()
-    //   layer.back.removeChildren()
-    // })
+    [this.message0, this.message1].forEach((layer) => {
+      layer.fore.removeChildren()
+      layer.fore.alpha = 255
+      layer.fore.visible = true
+
+      layer.back.removeChildren()
+      layer.back.alpha = 255
+      layer.back.visible = true
+    })
   }
 
   /**
@@ -386,11 +392,14 @@ export class KirikiriRenderer {
       frame: new Rectangle(width * 2, 0, width, height),
     })
 
-    const buttonNormal = new Sprite(baseTexture)
-    buttonNormal.width = this.scale * width
-    buttonNormal.height = this.scale * height
-    buttonNormal.x = this.scale * this.location.x
-    buttonNormal.y = this.scale * this.location.y
+    const buttonNormal = new Sprite({
+      texture: baseTexture,
+      label: file,
+      width: this.scale * width,
+      height: this.scale * height,
+      x: this.scale * this.location.x,
+      y: this.scale * this.location.y,
+    })
 
     this.resetLocation()
 
@@ -446,7 +455,7 @@ export class KirikiriRenderer {
   /**
    * This function recursively traverses the entire tree of the app stage and logs the name and type of each child.
    */
-  debugFullTree() {
+  getTreeString() {
     const tree: string[] = []
 
     const traverse = (node: any, depth: number) => {
@@ -460,6 +469,6 @@ export class KirikiriRenderer {
 
     traverse(this.app.stage, 0)
 
-    console.log(tree.join('\n'))
+    return tree.join('\n')
   }
 }

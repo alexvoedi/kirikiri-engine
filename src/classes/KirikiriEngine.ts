@@ -326,6 +326,7 @@ export class KirikiriEngine {
                   break
                 }
                 case 'link': {
+                  this.logger.warn(`Link command is not implemented yet: ${command} at line ${index + 1}`)
                   break
                 }
                 case 'if': {
@@ -409,7 +410,24 @@ export class KirikiriEngine {
   async processText(text: string) {
     const { commands, text: textWithoutCommands } = removeCommandsFromText(text)
 
-    for (let i = 0; i < textWithoutCommands.length + 1; i++) {
+    let skip = false
+
+    const onClick = () => {
+      skip = true
+    }
+
+    if (this.commandStorage.clickskip?.enabled) {
+      window.addEventListener('click', () => {
+        onClick()
+      }, { once: true })
+    }
+
+    let i = 0
+    while (i < textWithoutCommands.length + 1) {
+      if (skip) {
+        i = textWithoutCommands.length
+      }
+
       const currentText = textWithoutCommands.slice(0, i)
 
       await this.renderText(currentText)
@@ -437,10 +455,16 @@ export class KirikiriEngine {
             this.updateCommandCallCount(command)
           }
           catch {
-            // this.logger.error(`Error processing command: ${command} at line ${i + 1}`)
+            this.logger.error(`Error processing command: ${command} at line ${i + 1}`)
           }
         }
       }
+
+      i += 1
+    }
+
+    if (this.commandStorage.clickskip?.enabled) {
+      window.removeEventListener('click', onClick)
     }
   }
 
