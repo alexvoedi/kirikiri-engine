@@ -39,7 +39,7 @@ export class KirikiriLayer extends Container {
     })
   }
 
-  setPage(page: 'back' | 'fore', element: Renderable, options?: {
+  setPage(page: 'back' | 'fore', element: Renderable | Container, options?: {
     opacity?: number
     visible?: boolean
     x?: number
@@ -69,7 +69,7 @@ export class KirikiriLayer extends Container {
   }
 
   stopTransition() {
-    console.log('stothetransition')
+    // todo
   }
 
   fadeTransition(step: number, dt: number) {
@@ -112,9 +112,7 @@ export class KirikiriLayer extends Container {
   }
 
   reset() {
-    console.log('RESEEEET')
-    // this.back.removeChildren()
-    // this.fore.removeChildren()
+    // todo
   }
 
   /**

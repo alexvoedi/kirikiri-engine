@@ -13,11 +13,11 @@ import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
+import { extractCommands } from '../utils/extractCommands'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
 import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
 import { isComment } from '../utils/isComment'
-import { removeCommandsFromText } from '../utils/removeCommandsFromText'
 import { removeFileExtension } from '../utils/removeFileExtension'
 import { sanitizeLine } from '../utils/sanitizeLine'
 import { splitMultiCommandLine } from '../utils/splitMultiCommandLine'
@@ -275,8 +275,6 @@ export class KirikiriEngine {
 
       const line = lines[index]
 
-      console.log(line)
-
       const firstCharacter = line.charAt(0)
 
       try {
@@ -392,11 +390,11 @@ export class KirikiriEngine {
     } while (index < lines.length)
   }
 
-  async renderText(text: string) {
+  async addCharacter(character: string, indent?: boolean) {
     const renderSpeed = 40
 
     return new Promise<void>((resolve) => {
-      this.renderer.setText(text)
+      this.renderer.addCharacterToText(character, indent)
 
       setTimeout(() => {
         resolve()
@@ -408,64 +406,71 @@ export class KirikiriEngine {
    * Process text.
    */
   async processText(text: string) {
-    const { commands, text: textWithoutCommands } = removeCommandsFromText(text)
+    // let skip = false
 
-    let skip = false
+    // const onClick = () => {
+    //   skip = true
+    // }
 
-    const onClick = () => {
-      skip = true
-    }
+    // if (this.commandStorage.clickskip?.enabled) {
+    //   window.addEventListener('click', () => {
+    //     onClick()
+    //   }, { once: true })
+    // }
 
-    if (this.commandStorage.clickskip?.enabled) {
-      window.addEventListener('click', () => {
-        onClick()
-      }, { once: true })
-    }
+    let index = 0
+    let indent = false
+    while (index < text.length) {
+      const character = text.charAt(index)
 
-    let i = 0
-    while (i < textWithoutCommands.length + 1) {
-      if (skip) {
-        i = textWithoutCommands.length
-      }
-
-      const currentText = textWithoutCommands.slice(0, i)
-
-      await this.renderText(currentText)
-
-      if (commands[i]) {
-        for (const c of commands[i]) {
-          const { command, props } = c
-
+      const { length, commands } = extractCommands(text.slice(index))
+      if (commands.length) {
+        for (const { command, props } of commands) {
           try {
-            const macro = this.macros[command]
-            if (macro) {
-              await macro(props)
+            if (command === 'indent') {
+              indent = true
+            }
+            else if (command === 'endindent') {
+              indent = false
+            }
+            else if (command === 'r') {
+              await this.addCharacter('\n', indent)
             }
             else {
-              const commandFunction = getCommand(command)
-
-              if (commandFunction) {
-                await commandFunction(this, props)
+              const macro = this.macros[command]
+              if (macro) {
+                await macro(props)
               }
               else {
-                this.logger.warn(`Unknown command: ${command} at line ${i + 1}`)
+                const commandFunction = getCommand(command)
+
+                if (commandFunction) {
+                  await commandFunction(this, props)
+                }
+                else {
+                  this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+                }
               }
             }
-
-            this.updateCommandCallCount(command)
           }
           catch {
-            this.logger.error(`Error processing command: ${command} at line ${i + 1}`)
+            this.logger.error(`Error processing command: ${command} at line ${index + 1}`)
           }
         }
+
+        index += length
+
+        continue
       }
 
-      i += 1
+      await this.addCharacter(character, indent)
+
+      index += 1
     }
 
-    if (this.commandStorage.clickskip?.enabled) {
-      window.removeEventListener('click', onClick)
-    }
+    // if (this.commandStorage.clickskip?.enabled) {
+    //   window.removeEventListener('click', onClick)
+    // }
   }
 
   /**

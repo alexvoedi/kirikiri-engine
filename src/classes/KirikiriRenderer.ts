@@ -128,7 +128,6 @@ export class KirikiriRenderer {
     time: number
     children?: boolean
   }) {
-    console.log(this.getTreeString())
     const fadeStep = 1000 / (options.time * 60)
 
     const layers = this.getLayersArr()
@@ -241,6 +240,71 @@ export class KirikiriRenderer {
       this.resetLocation()
 
       this.message0.setPage('fore', textElement)
+    }
+  }
+
+  addCharacterToText(character: string, indent?: boolean) {
+    let textContainer = this.message0.fore.getChildByLabel('text-container') as Container
+
+    if (!textContainer) {
+      textContainer = new Container({
+        label: 'text-container',
+        x: this.scale * this.location.x,
+        y: this.scale * this.location.y,
+      })
+
+      this.resetLocation()
+
+      this.message0.setPage('fore', textContainer)
+    }
+
+    if (indent) {
+      const textElement = textContainer.getChildByLabel('text-1') as Text
+
+      if (textElement) {
+        textElement.text += character
+      }
+      else {
+        const speakerElement = textContainer.getChildByLabel('text-0') as Text
+
+        if (!speakerElement) {
+          throw new Error('Speaker text element not found')
+        }
+
+        const textElement = new Text({
+          text: character,
+          label: 'text-1',
+          style: {
+            fontSize: this.app.screen.height / 28,
+            fill: 0xFFFFFF,
+            fontFamily: 'Kiwi Maru',
+          },
+          x: speakerElement.x + speakerElement.width,
+          y: speakerElement.y,
+        })
+
+        textContainer.addChild(textElement)
+      }
+    }
+    else {
+      const textElement = textContainer.getChildByLabel('text-0') as Text
+
+      if (textElement) {
+        textElement.text += character
+      }
+      else {
+        const textElement = new Text({
+          text: character,
+          label: 'text-0',
+          style: {
+            fontSize: this.app.screen.height / 28,
+            fill: 0xFFFFFF,
+            fontFamily: 'Kiwi Maru',
+          },
+        })
+
+        textContainer.addChild(textElement)
+      }
     }
   }
 
