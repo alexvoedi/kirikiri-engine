@@ -3,12 +3,11 @@ import type { CommandStorage } from '../types/CommandStorage'
 import type { Game } from '../types/Game'
 import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
 import { createConsola } from 'consola'
-import { ZodError } from 'zod'
 import { getCommand } from '../commands/getCommand'
 import { ifCommand } from '../commands/ifCommand'
 import { createMacro } from '../commands/macroCommand'
 import { scriptCommand } from '../commands/scriptCommand'
-import { COMMAND_BLOCKS, EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
+import { EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
 import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
@@ -241,150 +240,128 @@ export class KirikiriEngine {
     } while (index < lines.length)
   }
 
-  /**
-   * Execute the lines.
-   */
-  async runLines(lines: string[], index = 0): Promise<void> {
-    do {
-      if (this.state === EngineState.PAUSED) {
-        await new Promise<void>((resolve) => {
-          window.addEventListener(EngineEvent.CONTINUE, () => {
-            resolve()
-          })
-        })
+  private async handlePausedState(): Promise<void> {
+    if (this.state === EngineState.PAUSED) {
+      await new Promise<void>((resolve) => {
+        window.addEventListener(EngineEvent.CONTINUE, () => resolve())
+      })
+    }
+  }
+
+  private async handleCancelSubroutine() {
+    this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
+    this.state = EngineState.RUNNING
+    window.dispatchEvent(new CustomEvent(EngineEvent.SUBROUTINE_CANCELLED))
+  }
+
+  private async handleCancelAllSubroutines() {
+    if (this.subroutineCallStack.length === 1) {
+      this.state = EngineState.RUNNING
+      window.dispatchEvent(new CustomEvent(EngineEvent.ALL_SUBROUTINES_CANCELLED))
+    }
+    else {
+      this.logger.info(`Cancelled subroutine ${this.subroutineCallStack[this.subroutineCallStack.length - 1]}`)
+    }
+  }
+
+  private async processLine(line: string, index: number, lines: string[]): Promise<number> {
+    const firstCharacter = line.charAt(0)
+    this.currentData.line = line
+
+    switch (firstCharacter) {
+      case '*':
+        return index + 1
+
+      case '@':
+      case '[':
+        return await this.processCommand(line, index, lines)
+
+      default:
+        await this.processText(line)
+        return index + 1
+    }
+  }
+
+  private async processCommand(line: string, index: number, lines: string[]): Promise<number> {
+    const { command, props } = extractCommand(line)
+
+    this.updateCommandCallCount(command)
+
+    try {
+      const macro = this.macros[command]
+      if (macro) {
+        await macro(props)
+        return index + 1
       }
+
+      const blockCommand = checkIsBlockCommand(command)
+      if (blockCommand) {
+        return await this.processBlockCommand(command, index, lines, props)
+      }
+
+      const basicCommand = getCommand(command)
+      await basicCommand(this, props)
+      return index + 1
+    }
+    catch (error) {
+      if (error instanceof UnknownCommandError) {
+        this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+      }
+      else {
+        this.logger.error(`Error processing command: ${command} at line ${index + 1}`, error)
+      }
+
+      return index + 1
+    }
+  }
+
+  private async processBlockCommand(command: string, index: number, lines: string[], props: Record<string, string>): Promise<number> {
+    const closingIndex = findClosingBlockCommandIndex(command, index, lines)
+
+    const blockLines = lines.slice(index + 1, closingIndex)
+
+    switch (command) {
+      case 'macro': {
+        const { macro, name } = createMacro(this, { ...props, lines: blockLines })
+        this.macros[name] = macro
+        break
+      }
+      case 'iscript':
+        await scriptCommand(this, blockLines, props)
+        break
+      case 'link':
+        // todo
+        break
+      case 'if':
+        await ifCommand(this, { ...props, lines: blockLines })
+        break
+    }
+
+    return closingIndex + 1
+  }
+
+  async runLines(lines: string[]): Promise<void> {
+    let index = 0
+
+    do {
+      await this.handlePausedState()
 
       if (this.state === EngineState.CANCEL_SUBROUTINE) {
-        this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
-        this.state = EngineState.RUNNING
-        window.dispatchEvent(new CustomEvent(EngineEvent.SUBROUTINE_CANCELLED))
+        await this.handleCancelSubroutine()
         return
       }
-
       if (this.state === EngineState.CANCEL_ALL_SUBROUTINES) {
-        if (this.subroutineCallStack.length === 1) {
-          this.state = EngineState.RUNNING
-          window.dispatchEvent(new CustomEvent(EngineEvent.ALL_SUBROUTINES_CANCELLED))
-        }
-        else {
-          this.logger.info(`Cancelled subroutine ${this.subroutineCallStack[this.subroutineCallStack.length - 1]}`)
-        }
-
+        await this.handleCancelAllSubroutines()
         return
       }
 
       const line = lines[index]
 
-      const firstCharacter = line.charAt(0)
-
       try {
-        this.currentData.line = line
-
-        switch (firstCharacter) {
-          case '*': {
-            index += 1
-
-            break
-          }
-
-          case '@':
-          case '[': {
-            const { command, props } = extractCommand(line)
-
-            this.updateCommandCallCount(command)
-
-            const macro = this.macros[command]
-            if (macro) {
-              await macro(props)
-
-              index += 1
-              break
-            }
-
-            const isBlockCommand = checkIsBlockCommand(command)
-            if (isBlockCommand) {
-              const closingIndex = findClosingBlockCommandIndex(command, index, lines)
-
-              const blockLines = lines.slice(index + 1, closingIndex)
-
-              switch (command) {
-                case 'macro': {
-                  const { macro, name } = createMacro(this, {
-                    ...props,
-                    lines: blockLines,
-                  })
-
-                  this.macros[name] = macro
-
-                  break
-                }
-                case 'iscript': {
-                  await scriptCommand(this, blockLines, props)
-
-                  break
-                }
-                case 'link': {
-                  this.logger.warn(`Link command is not implemented yet: ${command} at line ${index + 1}`)
-                  break
-                }
-                case 'if': {
-                  await ifCommand(this, {
-                    ...props,
-                    lines: blockLines,
-                  })
-
-                  break
-                }
-              }
-
-              index = closingIndex + 1
-              break
-            }
-            else {
-              try {
-                const commandFunction = getCommand(command)
-
-                await commandFunction(this, props)
-              }
-              catch (error) {
-                if (Object.values(COMMAND_BLOCKS).includes(command)) {
-                  // ignore this
-                  index += 1
-                  break
-                }
-
-                if (error instanceof UnknownCommandError) {
-                  this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
-                }
-                else {
-                  this.logger.error(`Error processing command: ${command} at line ${index + 1}`, error)
-                }
-              }
-
-              index += 1
-              break
-            }
-          }
-          default: {
-            await this.processText(line)
-
-            index += 1
-            break
-          }
-        }
+        index = await this.processLine(line, index, lines)
       }
       catch (error) {
-        if (error instanceof ZodError) {
-          error.issues.forEach((issue) => {
-            if (issue.code === 'unrecognized_keys') {
-              this.logger.error(line, error)
-            }
-          })
-        }
-        else {
-          this.logger.error(`Error processing line ${index + 1}: ${line}`, error)
-        }
-
+        this.logger.error(`Error processing line ${index + 1}: ${line}`, error)
         index += 1
       }
     } while (index < lines.length)
