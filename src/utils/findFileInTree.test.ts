@@ -13,6 +13,7 @@ describe('findFileInTree', () => {
     'README.md': null,
     'docs': {
       'index.md': null,
+      'snippet': null,
       'images': {
         'logo': null,
         'logo.png': null,
@@ -30,12 +31,12 @@ describe('findFileInTree', () => {
     },
   }
 
-  it('should find a file without recursion', () => {
+  it('should find a file in the root path', () => {
     const result = findFileInTree('README.md', mockTree)
     expect(result).toEqual('README.md')
   })
 
-  it('should find a file with recursion', () => {
+  it('should find file in a directory', () => {
     const result = findFileInTree('findFileInTree.ts', mockTree)
     expect(result).toEqual('src/utils/findFileInTree.ts')
   })
@@ -67,6 +68,7 @@ describe('findFileInTree', () => {
 
   it('finds the more specific file if multiple are available', () => {
     expect(findFileInTree('index', mockTree)).toEqual('docs/index.md')
+    expect(findFileInTree('snippet.md', mockTree)).toEqual('docs/snippet')
     expect(findFileInTree('logo', mockTree)).toEqual('docs/images/logo')
     expect(findFileInTree('logo.png', mockTree)).toEqual('docs/images/logo.png')
     expect(findFileInTree('logo.ks', mockTree)).toEqual('docs/images/logo.ks')

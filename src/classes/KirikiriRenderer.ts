@@ -159,40 +159,26 @@ export class KirikiriRenderer {
     this.app.ticker.add(iterate)
   }
 
-  setPosition(data: {
-    layer?: string
-    page?: 'back' | 'fore'
-    left?: number
-    top?: number
+  setPosition({
+    layer,
+    page,
+    ...rest
+  }: {
+    layer: string
+    page: 'back' | 'fore'
+    x?: number
+    y?: number
     width?: number
     height?: number
     visible?: boolean
     frame?: string
     opacity?: number
   }) {
-    const {
-      layer = 'message0',
-      page = 'fore',
-      left = 0,
-      top = 0,
-      width = 0,
-      height = 0,
-      visible = true,
-      frame = '',
-      opacity = 1,
-    } = data
-
     const layerGroup = this.getOrCreateLayer(layer)
 
     layerGroup.setPageAttributes({
       page,
-      left,
-      top,
-      width,
-      height,
-      visible,
-      frame,
-      opacity,
+      ...rest,
     })
   }
 

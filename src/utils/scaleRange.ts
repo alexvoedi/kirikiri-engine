@@ -5,5 +5,5 @@ export function scaleRange(
   outMin: number,
   outMax: number,
 ): number {
-  return ((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin
+  return Math.round(((value - inMin) * (outMax - outMin)) / (inMax - inMin) + outMin)
 }

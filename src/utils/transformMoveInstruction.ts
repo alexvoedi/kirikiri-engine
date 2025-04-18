@@ -11,7 +11,7 @@ export function transformMoveInstruction(text: string): Array<{
   opacity: number
 }> {
   return text.split(' ').map((point) => {
-    const match = point.match(/^\(([-\d]+),([-\d]+),([-\d]+)\)$/)
+    const match = /^\(([-\d]+),([-\d]+),([-\d]+)\)$/.exec(point)
     if (!match) {
       throw new Error(`Invalid path format: ${point}`)
     }

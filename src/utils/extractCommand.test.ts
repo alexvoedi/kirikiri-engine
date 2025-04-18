@@ -15,7 +15,7 @@ describe('extractCommand', () => {
   })
 
   it('should handle a command line with no properties', () => {
-    const line = '[command]'
+    const line = '  [  command  ]  '
     const result = extractCommand(line)
     expect(result).toEqual({
       command: 'command',
@@ -83,4 +83,14 @@ describe('extractCommand', () => {
       },
     })
   })
+})
+
+it('should throw an error when the command line is empty', () => {
+  const line = '[]'
+  expect(() => extractCommand(line)).toThrowError()
+})
+
+it('should throw an error when the command line contains only spaces', () => {
+  const line = '[   ]'
+  expect(() => extractCommand(line)).toThrowError()
 })

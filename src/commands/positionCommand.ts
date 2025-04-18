@@ -1,10 +1,10 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
-import { createBooleanSchema, createIntegerSchema, createPageSchema } from '../schemas/zod'
+import { createBooleanSchema, createIntegerSchema, createPageSchema } from '../schemas'
 
 const schema = z.object({
-  layer: z.string().optional(),
-  page: createPageSchema().optional(),
+  layer: z.string().optional().default('message0'),
+  page: createPageSchema().optional().default('fore'),
   left: createIntegerSchema().optional(),
   top: createIntegerSchema().optional(),
   width: createIntegerSchema().optional(),

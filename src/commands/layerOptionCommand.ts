@@ -1,6 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
-import { createBooleanSchema, createIntegerSchema } from '../schemas/zod'
+import { createBooleanSchema, createIntegerSchema } from '../schemas'
 
 const schema = z.object({
   layer: z.string(),

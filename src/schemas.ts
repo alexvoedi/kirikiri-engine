@@ -1,5 +1,6 @@
+import type { ZodTypeDef } from 'zod'
 import { z } from 'zod'
-import { scaleRange } from '../utils/scaleRange'
+import { scaleRange } from './utils/scaleRange'
 
 export function createBooleanSchema(): z.Schema<boolean, ZodTypeDef, string | boolean> {
   return z.union([z.enum(['true', 'false']), z.boolean()]).transform((value) => {
@@ -12,34 +13,18 @@ export function createBooleanSchema(): z.Schema<boolean, ZodTypeDef, string | bo
 }
 
 export function createIntegerSchema(min?: number, max?: number): z.ZodSchema<number> {
-  const schema = z.coerce.number()
+  return z.coerce.number()
     .refine(value => Number.isInteger(value), { message: 'Value must be an integer' })
     .refine(value => !Number.isNaN(value), { message: 'Value must be a number' })
-
-  if (min !== undefined) {
-    schema.pipe(schema.refine(value => value >= min, { message: `Value must be greater than or equal to ${min}` }))
-  }
-
-  if (max !== undefined) {
-    schema.pipe(schema.refine(value => value <= max, { message: `Value must be less than or equal to ${max}` }))
-  }
-
-  return schema
+    .refine(value => min !== undefined ? value >= min : true, { message: `Value must be greater than or equal to ${min}` })
+    .refine(value => max !== undefined ? value <= max : true, { message: `Value must be less than or equal to ${max}` })
 }
 
 export function createFloatSchema(min?: number, max?: number): z.ZodSchema<number> {
-  const schema = z.coerce.number()
+  return z.coerce.number()
     .refine(value => !Number.isNaN(value), { message: 'Value must be a number' })
-
-  if (min !== undefined) {
-    schema.pipe(schema.refine(value => value >= min, { message: `Value must be greater than or equal to ${min}` }))
-  }
-
-  if (max !== undefined) {
-    schema.pipe(schema.refine(value => value <= max, { message: `Value must be less than or equal to ${max}` }))
-  }
-
-  return schema
+    .refine(value => min !== undefined ? value >= min : true, { message: `Value must be greater than or equal to ${min}` })
+    .refine(value => max !== undefined ? value <= max : true, { message: `Value must be less than or equal to ${max}` })
 }
 
 export function createGammaSchema() {

@@ -1,7 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
-import { createIntegerSchema } from '../schemas/zod'
+import { createIntegerSchema } from '../schemas'
 
 const schema = z.object({
   speed: z.union([
@@ -15,6 +15,6 @@ export async function delayCommand(engine: KirikiriEngine, props?: Record<string
   const parsed = schema.parse(props)
 
   merge(engine.commandStorage, {
-    deplay: parsed,
+    delay: parsed,
   })
 }

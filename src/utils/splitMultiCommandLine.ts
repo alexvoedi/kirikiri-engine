@@ -1,5 +1,3 @@
-import { checkIsCommand } from './checkIsCommand'
-
 /**
  * Check if there are multiple commands in a single line and split them.
  *
@@ -19,12 +17,6 @@ export function splitMultiCommandLine(line: string): string[] {
 
   for (const match of line.matchAll(regex)) {
     const part = match[0].trim()
-
-    if (part.startsWith('[') && part.endsWith(']')) {
-      if (!checkIsCommand(part)) {
-        throw new Error(`Malformed command: ${part}`)
-      }
-    }
 
     lines.push(part)
   }

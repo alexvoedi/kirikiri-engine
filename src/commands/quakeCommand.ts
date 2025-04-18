@@ -1,6 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
-import { createIntegerSchema } from '../schemas/zod'
+import { createIntegerSchema } from '../schemas'
 
 const schema = z.object({
   time: createIntegerSchema(),

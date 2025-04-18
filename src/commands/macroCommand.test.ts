@@ -1,6 +1,6 @@
-import type { Game } from '../types/Game'
+import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import dotenv from 'dotenv'
-import { KirikiriEngine } from '../classes/KirikiriEngine'
+import { setupEngine } from '../testSetup'
 import { createMacro } from './macroCommand'
 
 dotenv.config()
@@ -8,20 +8,8 @@ dotenv.config()
 describe('macroCommand', () => {
   let engine: KirikiriEngine
 
-  beforeAll(async () => {
-    const root = process.env.GAME_ROOT ?? ''
-    const url = new URL('/ojamajo/files.json', root)
-    const files = await fetch(url)
-
-    const game: Game = {
-      root,
-      entry: 'first.ks',
-      files: await files.json(),
-    }
-
-    const container = document.createElement('div')
-
-    engine = new KirikiriEngine({ container, game })
+  beforeEach(async () => {
+    engine = await setupEngine()
   })
 
   it('can create a macro from lines', () => {

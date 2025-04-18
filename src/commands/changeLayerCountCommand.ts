@@ -1,6 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
-import { createFloatSchema } from '../schemas/zod'
+import { createFloatSchema } from '../schemas'
 
 const schema = z.object({
   layers: createFloatSchema(),

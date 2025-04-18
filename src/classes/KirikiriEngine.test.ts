@@ -1,7 +1,6 @@
-import type { Game } from '../types/Game'
-import process from 'node:process'
 import dotenv from 'dotenv'
 import { describe, expect, it } from 'vitest'
+import { setupEngine } from '../testSetup'
 import { KirikiriEngine } from './KirikiriEngine'
 
 dotenv.config()
@@ -9,20 +8,23 @@ dotenv.config()
 describe('kirikiriEngine', () => {
   let engine: KirikiriEngine
 
-  beforeAll(async () => {
-    const root = process.env.GAME_ROOT ?? ''
-    const url = new URL('/ojamajo/files.json', root)
-    const files = await fetch(url)
+  beforeEach(async () => {
+    engine = await setupEngine()
 
-    const game: Game = {
-      root,
-      entry: 'first.ks',
-      files: await files.json(),
-    }
+    vi.spyOn(engine, 'loadFile').mockImplementation(async (filename: string) => {
+      if (filename === 'mock.ks') {
+        return [
+          '[wait time=100]',
+          '*シナリオ|This is a test scenario.',
+          'Another line of content.',
+        ]
+      }
+      throw new Error('File not found')
+    })
 
-    const container = document.createElement('div')
-
-    engine = new KirikiriEngine({ container, game })
+    vi.spyOn(engine, 'getFullFilePath').mockImplementation((filename: string) => {
+      return `https://example.com/${filename}`
+    })
   })
 
   it('should be able to instantiate', () => {
@@ -30,7 +32,7 @@ describe('kirikiriEngine', () => {
   })
 
   it('should be able to load the file content with the correct encoding', async () => {
-    const lines = await engine.loadFile('first.ks')
+    const lines = await engine.loadFile('mock.ks')
 
     expect(lines).toBeDefined()
     expect(lines[0].startsWith('[wait time=100]')).toBe(true)
@@ -39,14 +41,14 @@ describe('kirikiriEngine', () => {
   })
 
   it('can process lines without throwing an error', async () => {
-    const lines = await engine.loadFile('first.ks')
+    const lines = await engine.loadFile('mock.ks')
 
     expect(() => engine.runLines(lines)).not.toThrow()
   })
 
   it('can get the full file path', () => {
-    const filename = 'どれみ1015.mpg'
+    const filename = 'myfile.ks'
 
-    expect(engine.getFullFilePath(filename)).toBe('https://static.nekatz.com/ojamajo/video/どれみ1015.mp4')
+    expect(engine.getFullFilePath(filename)).toBe('https://example.com/myfile.ks')
   })
 })

@@ -1,6 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
-import { createBooleanSchema } from '../schemas/zod'
+import { createBooleanSchema } from '../schemas'
 import { checkCondition } from '../utils/checkCondition'
 
 const schema = z.object({

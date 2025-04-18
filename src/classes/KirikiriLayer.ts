@@ -23,7 +23,7 @@ export class KirikiriLayer extends Container {
     label: 'fore',
   })
 
-  constructor(private readonly renderer: KirikiriRenderer, readonly label: string) {
+  constructor(readonly renderer: KirikiriRenderer, readonly label: string) {
     super({
       label,
     })

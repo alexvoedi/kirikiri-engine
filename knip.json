@@ -5,6 +5,7 @@
     "src/cli.ts"
   ],
   "project": [
-    "src/**/*.ts!"
+    "src/**/*.ts!",
+    "!src/testSetup.ts"
   ]
 }

@@ -1,7 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
-import { createBooleanSchema, createIntegerSchema } from '../schemas/zod'
+import { createBooleanSchema, createIntegerSchema } from '../schemas'
 
 const schema = z.object({
   visible: createBooleanSchema().optional(),

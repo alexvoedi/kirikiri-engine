@@ -1,6 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
-import { createBooleanSchema, createGammaSchema, createIntegerSchema } from '../schemas/zod'
+import { createBooleanSchema, createGammaSchema, createIntegerSchema } from '../schemas'
 
 const schema = z.object({
   ggamma: createGammaSchema().optional(),

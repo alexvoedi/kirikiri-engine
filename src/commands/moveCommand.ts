@@ -1,7 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
-import { createIntegerSchema } from '../schemas/zod'
+import { createIntegerSchema } from '../schemas'
 import { transformMoveInstruction } from '../utils/transformMoveInstruction'
 
 const schema = z.object({

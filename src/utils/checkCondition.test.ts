@@ -16,4 +16,9 @@ describe('checkCondition', () => {
     const result = await checkCondition(mockEngine, script)
     expect(result).toBe(true)
   })
+
+  it('should throw an error for an invalid expression', async () => {
+    const script = '3 == '
+    await expect(checkCondition(mockEngine, script)).rejects.toThrowError()
+  })
 })

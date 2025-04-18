@@ -1,3 +1,6 @@
+/**
+ * @public
+ */
 export enum Loglevel {
   Error = 0,
   Warn = 1,

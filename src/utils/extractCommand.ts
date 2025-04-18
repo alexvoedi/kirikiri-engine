@@ -8,9 +8,14 @@ export function extractCommand(line: string) {
     throw new Error(`Invalid command line: ${line}`)
   }
 
-  const [command, ...keyValueStrings] = commandLine
+  const commands = commandLine
     .match(/(?:[^\s"']|"[^"]*"|'[^']*')+/g) // Match words or quoted substrings
-    ?.map(part => part.trim()) || [] // Trim each part
+
+  if (!commands?.length) {
+    throw new Error(`Invalid command line: ${line}`)
+  }
+
+  const [command, ...keyValueStrings] = commands.map(s => s.trim())
 
   const props = keyValueStrings.reduce((acc, keyValueString) => {
     const match = keyValueString.match(/^([^=]+)=(.+)$/)

@@ -17,19 +17,15 @@ export async function waitForTransitionCommand(engine: KirikiriEngine, props?: R
       resolve()
     }
     else {
-      const handleTransitionEnded = () => {
+      window.addEventListener(EngineEvent.TRANSITION_ENDED, () => {
         merge(engine.commandStorage, {
           trans: {
             transitioning: false,
           },
         })
 
-        window.removeEventListener(EngineEvent.TRANSITION_ENDED, handleTransitionEnded)
-
         resolve()
-      }
-
-      window.addEventListener(EngineEvent.TRANSITION_ENDED, handleTransitionEnded)
+      }, { once: true })
     }
   })
 }

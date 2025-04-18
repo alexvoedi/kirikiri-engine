@@ -2,7 +2,7 @@ import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'lodash'
 import { z } from 'zod'
 import { EngineEvent } from '../constants'
-import { createBooleanSchema, createIntegerSchema } from '../schemas/zod'
+import { createBooleanSchema, createIntegerSchema } from '../schemas'
 
 const schema = z.object({
   storage: z.string(),
