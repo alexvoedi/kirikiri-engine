@@ -1,7 +1,7 @@
 {
   "name": "kirikiri-engine",
   "type": "module",
-  "version": "0.0.1",
+  "version": "0.1.0-beta.0",
   "private": false,
   "packageManager": "pnpm@10.8.0",
   "description": "a javascript reimplementation for the kirikiri visual novel engine",
