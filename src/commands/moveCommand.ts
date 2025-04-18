@@ -6,6 +6,7 @@ import { transformMoveInstruction } from '../utils/transformMoveInstruction'
 
 const schema = z.object({
   layer: z.string(),
+  page: z.enum(['back', 'fore']).optional().default('fore'),
   time: createIntegerSchema(),
   path: z.string().transform(transformMoveInstruction),
 }).strict()

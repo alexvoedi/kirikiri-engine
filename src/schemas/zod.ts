@@ -1,8 +1,14 @@
 import { z } from 'zod'
 import { scaleRange } from '../utils/scaleRange'
 
-export function createBooleanSchema(): z.ZodSchema<boolean> {
-  return z.coerce.boolean()
+export function createBooleanSchema(): z.Schema<boolean, ZodTypeDef, string | boolean> {
+  return z.union([z.enum(['true', 'false']), z.boolean()]).transform((value) => {
+    if (typeof value === 'boolean') {
+      return value
+    }
+
+    return value === 'true'
+  })
 }
 
 export function createIntegerSchema(min?: number, max?: number): z.ZodSchema<number> {

@@ -4,7 +4,7 @@ import { createPageSchema } from '../schemas/zod'
 
 const schema = z.object({
   layer: z.string(),
-  page: createPageSchema().optional(),
+  page: createPageSchema().optional().default('fore'),
 }).strict()
 
 /**

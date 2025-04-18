@@ -12,7 +12,7 @@ const schema = z.object({
   storage: z.string().optional(),
   rule: z.string().optional(),
   vague: createIntegerSchema().optional(),
-  children: createBooleanSchema().optional(),
+  children: createBooleanSchema().optional().default(true),
 }).strict()
 
 export async function transitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {

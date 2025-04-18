@@ -17,5 +17,9 @@ const schema = z.object({
 export async function positionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  engine.renderer.setPosition(parsed)
+  engine.renderer.setPosition({
+    ...parsed,
+    x: parsed.left,
+    y: parsed.top,
+  })
 }
