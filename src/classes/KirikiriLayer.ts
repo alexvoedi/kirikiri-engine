@@ -23,6 +23,8 @@ export class KirikiriLayer extends Container {
     label: 'fore',
   })
 
+  transitioning?: boolean = false
+
   constructor(readonly renderer: KirikiriRenderer, readonly label: string) {
     super({
       label,
@@ -64,25 +66,28 @@ export class KirikiriLayer extends Container {
     pageObj.addChild(element)
   }
 
-  transition(step: number, dt: number) {
-    this.fadeTransition(step, dt)
+  transition(dt: number) {
+    this.transitioning = true
+
+    this.fore.alpha -= dt
+
+    if (this.fore.alpha <= 0) {
+      this.stopTransition()
+    }
   }
 
   stopTransition() {
-    // todo
-  }
+    if (!this.transitioning)
+      return
 
-  fadeTransition(step: number, dt: number) {
-    this.fore.alpha -= step * dt
+    this.fore.alpha = 0
 
-    if (this.fore.alpha <= 0) {
-      this.fore.alpha = 0
+    this.fore.removeChildren()
+    this.back.children.forEach(child => this.fore.addChild(child))
 
-      this.fore.removeChildren()
-      this.back.children.forEach(child => this.fore.addChild(child))
+    this.fore.alpha = 1
 
-      this.fore.alpha = 1
-    }
+    this.transitioning = false
   }
 
   setPageAttributes(data: {
@@ -98,6 +103,10 @@ export class KirikiriLayer extends Container {
       page.alpha = data.opacity
     if (data.visible !== undefined)
       page.visible = data.visible
+    if (data.width !== undefined)
+      page.width = this.renderer.scale * data.width
+    if (data.height !== undefined)
+      page.height = this.renderer.scale * data.height
   }
 
   setLayerAttributes(data: {

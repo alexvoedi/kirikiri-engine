@@ -18,7 +18,7 @@ export function extractCommand(line: string) {
   const [command, ...keyValueStrings] = commands.map(s => s.trim())
 
   const props = keyValueStrings.reduce((acc, keyValueString) => {
-    const match = keyValueString.match(/^([^=]+)=(.+)$/)
+    const match = /^([^=]+)=(.+)$/.exec(keyValueString)
     if (match) {
       const key = match[1].trim()
       const value = match[2].trim()

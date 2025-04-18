@@ -10,6 +10,9 @@ export class KirikiriRenderer {
   private message0!: KirikiriLayer
   private message1!: KirikiriLayer
 
+  private currentMessageLayer: 'message0' | 'message1' = 'message0'
+  private currentMessagePage: 'back' | 'fore' = 'fore'
+
   private readonly location: {
     x: number
     y: number
@@ -52,7 +55,14 @@ export class KirikiriRenderer {
   }
 
   get scale() {
-    return this.app.stage.width / 758
+    return this.app.stage.width / 800
+  }
+
+  get offset() {
+    return {
+      x: this.scale * 28,
+      y: this.scale * 24,
+    }
   }
 
   async setImage(data: {
@@ -134,7 +144,14 @@ export class KirikiriRenderer {
 
     let timer = 1
     const iterate = (delta: { deltaTime: number }) => {
-      layers.forEach(layer => layer.transition(fadeStep, delta.deltaTime))
+      const dt = fadeStep * delta.deltaTime
+
+      if (options.children) {
+        layers.forEach(layer => layer.transition(dt))
+      }
+      else {
+        this.base.transition(dt)
+      }
 
       timer -= fadeStep * delta.deltaTime
 
@@ -153,6 +170,8 @@ export class KirikiriRenderer {
       window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
       window.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
     }
+
+    iterate({ deltaTime: 0 })
 
     window.addEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
 
@@ -219,8 +238,8 @@ export class KirikiriRenderer {
           breakWords: true,
           wordWrapWidth: this.app.screen.width,
         },
-        x: this.scale * this.location.x,
-        y: this.scale * this.location.y,
+        x: this.location.x,
+        y: this.location.y,
       })
 
       this.resetLocation()
@@ -235,8 +254,8 @@ export class KirikiriRenderer {
     if (!textContainer) {
       textContainer = new Container({
         label: 'text-container',
-        x: this.scale * this.location.x,
-        y: this.scale * this.location.y,
+        x: this.location.x,
+        y: this.location.y,
       })
 
       this.resetLocation()
@@ -378,6 +397,12 @@ export class KirikiriRenderer {
   clearText() {
     this.message0.back.removeChildren()
     this.message0.fore.removeChildren()
+
+    this.message1.back.removeChildren()
+    this.message1.fore.removeChildren()
+
+    this.currentMessageLayer = 'message0'
+    this.currentMessagePage = 'fore'
   }
 
   /**
@@ -399,11 +424,11 @@ export class KirikiriRenderer {
 
   setLocation(x?: number, y?: number) {
     if (x !== undefined) {
-      this.location.x = x
+      this.location.x = this.offset.x + x
     }
 
     if (y !== undefined) {
-      this.location.y = y
+      this.location.y = this.offset.y + y
     }
   }
 
@@ -475,7 +500,7 @@ export class KirikiriRenderer {
       await data.callback()
     })
 
-    this.message0.fore.addChild(buttonNormal)
+    this[this.currentMessageLayer][this.currentMessagePage].addChild(buttonNormal)
   }
 
   clearMessageLayerPages() {

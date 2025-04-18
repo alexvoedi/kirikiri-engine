@@ -33,7 +33,7 @@ export const GLOBAL_SCRIPT_CONTEXT = {
   kag: {
     bgm: {
       buf1: {
-        volume2: undefined,
+        volume2: null,
       },
       currentBuffer: {
         status: null,
@@ -51,6 +51,7 @@ export const GLOBAL_SCRIPT_CONTEXT = {
   },
   f: {
     testmode: 0,
+    cgPage: null,
   },
 }
 

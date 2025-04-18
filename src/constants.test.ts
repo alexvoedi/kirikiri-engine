@@ -44,7 +44,7 @@ describe('globals', () => {
 
 describe('global_script_context', () => {
   it('should have default values for kag.bgm', () => {
-    expect(GLOBAL_SCRIPT_CONTEXT.kag.bgm.buf1.volume2).toBeUndefined()
+    expect(GLOBAL_SCRIPT_CONTEXT.kag.bgm.buf1.volume2).toBeNull()
     expect(GLOBAL_SCRIPT_CONTEXT.kag.bgm.currentBuffer.status).toBeNull()
   })
 
