@@ -490,8 +490,6 @@ export class KirikiriEngine {
 
     this.currentData.subroutine = subroutineName
 
-    this.logger.info(`Running subroutine ${subroutineName}`)
-
     this.currentData.subroutine = subroutineName
     this.subroutineCallStack.push(subroutineName)
     this.logger.debug(`Running subroutine ${subroutineName}. Callstack: ${this.subroutineCallStack.join(' > ')}`)
