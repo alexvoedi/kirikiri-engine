@@ -13,6 +13,35 @@ export class KirikiriRenderer {
   private currentMessageLayer: 'message0' | 'message1' = 'message0'
   private currentMessagePage: 'back' | 'fore' = 'fore'
 
+  /**
+   * Global offset.
+   */
+  readonly globalOffset: {
+    x: number
+    y: number
+  } = {
+      x: 16,
+      y: 16,
+    }
+
+  /**
+   * Message layer margins.
+   */
+  readonly messageLayerMargins: {
+    left: number
+    right: number
+    top: number
+    bottom: number
+  } = {
+      left: 12,
+      right: 8,
+      top: 8,
+      bottom: 8,
+    }
+
+  /**
+   * Store a unscaled location to be used in another command.
+   */
   private readonly location: {
     x: number
     y: number
@@ -41,7 +70,14 @@ export class KirikiriRenderer {
     this.front.sortableChildren = true
     this.app.stage.addChild(this.front)
 
-    this.message0 = new KirikiriLayer(this, 'message0')
+    this.message0 = new KirikiriLayer(this, 'message0', {
+      margins: {
+        left: 12,
+        right: 8,
+        top: 8,
+        bottom: 8,
+      },
+    })
     this.app.stage.addChild(this.message0)
 
     this.message1 = new KirikiriLayer(this, 'message1')
@@ -50,13 +86,6 @@ export class KirikiriRenderer {
 
   get scale() {
     return this.app.stage.width / 800
-  }
-
-  get offset() {
-    return {
-      x: this.scale * 28,
-      y: this.scale * 24,
-    }
   }
 
   async setImage(data: {
@@ -79,7 +108,7 @@ export class KirikiriRenderer {
     })
 
     const layerGroup = this.getOrCreateLayer(layer)
-    layerGroup.setPage(
+    layerGroup.setPageElement(
       page,
       sprite,
       {
@@ -238,7 +267,7 @@ export class KirikiriRenderer {
 
       this.resetLocation()
 
-      this.message0.setPage('fore', textElement)
+      this.message0.setPageElement('fore', textElement)
     }
   }
 
@@ -248,13 +277,14 @@ export class KirikiriRenderer {
     if (!textContainer) {
       textContainer = new Container({
         label: 'text-container',
-        x: this.location.x,
-        y: this.location.y,
+        x: this.scale * (this.messageLayerMargins.left + this.location.x),
+        y: this.scale * (this.messageLayerMargins.top + this.location.y),
+      })
+
+      this.message0.setPageElement('fore', textContainer, {
       })
 
       this.resetLocation()
-
-      this.message0.setPage('fore', textContainer)
     }
 
     if (indent) {
@@ -309,7 +339,7 @@ export class KirikiriRenderer {
 
   setFont(data: {
     color?: string
-    shadow?: boolean
+    shadow?: boolean | 'default' | 'no'
   }) {
     const textElement = this.message0.fore.getChildByLabel('textelement') as Text
 
@@ -418,11 +448,11 @@ export class KirikiriRenderer {
 
   setLocation(x?: number, y?: number) {
     if (x !== undefined) {
-      this.location.x = this.offset.x + x
+      this.location.x = x
     }
 
     if (y !== undefined) {
-      this.location.y = this.offset.y + y
+      this.location.y = y
     }
   }
 
@@ -466,8 +496,8 @@ export class KirikiriRenderer {
       label: file,
       width: this.scale * width,
       height: this.scale * height,
-      x: this.scale * this.location.x,
-      y: this.scale * this.location.y,
+      x: this.scale * (this.globalOffset.x + this.messageLayerMargins.left + this.location.x),
+      y: this.scale * (this.globalOffset.y + this.messageLayerMargins.top + this.location.y),
     })
 
     this.resetLocation()

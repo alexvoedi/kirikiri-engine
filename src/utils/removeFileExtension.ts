@@ -1,5 +1,8 @@
 /**
  * Removes the file extension from a string if it has one.
+ *
+ * @param file - The file name or path to remove the extension from.
+ * @returns The file name or path without the extension.
  */
 export function removeFileExtension(file: string) {
   const lastDotIndex = file.lastIndexOf('.')

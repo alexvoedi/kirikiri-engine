@@ -2,7 +2,7 @@ import type { FileTree } from './FileTree'
 
 export interface Game {
   /**
-   * The root directory of the game.
+   * The root directory of the game. This is where the game data foldeers are located.
    */
   root: string
 

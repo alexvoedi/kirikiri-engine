@@ -24,7 +24,7 @@ import { KirikiriRenderer } from './KirikiriRenderer'
 
 export class KirikiriEngine {
   /**
-   * Container element where the game will be rendered.
+   * Canvas element where the game will be rendered.
    */
   readonly canvas: HTMLCanvasElement
 
@@ -101,10 +101,13 @@ export class KirikiriEngine {
   }
 
   /**
-   * Message
+   * Creates a new Kirikiri engine instance.
+   *
+   * @param params - The parameters for the engine.
+   * @param params.canvas - The canvas element where the game will be rendered.
+   * @param params.game - The game data.
+   * @param params.options - The engine options.
    */
-  readonly text: string = ''
-
   constructor({ canvas, game, options }: {
     canvas: HTMLCanvasElement
     game: Game
@@ -139,14 +142,34 @@ export class KirikiriEngine {
     this.state = EngineState.RUNNING
 
     await this.runSubroutine('start')
-
-    // this.printCommandCallCount()
   }
 
   /**
    * Load the file content with the correct encoding.
    */
   async loadFile(filename: string): Promise<string[]> {
+    const response = await this.fetchFile(filename)
+
+    const lines = await this.convertFilesToLines(response)
+
+    this.currentData.script = removeFileExtension(filename)
+
+    await this.registerAllSubroutines(lines)
+
+    return lines
+  }
+
+  private async convertFilesToLines(response: Response) {
+    const arrayBuffer = await response.arrayBuffer()
+
+    const text = new TextDecoder('shift-jis').decode(arrayBuffer)
+
+    const lines = this.splitAndSanitize(text)
+
+    return lines
+  }
+
+  private async fetchFile(filename: string) {
     const foundFile = findFileInTree(filename, this.game.files)
 
     if (!foundFile) {
@@ -163,17 +186,7 @@ export class KirikiriEngine {
       throw new Error(`Failed to load file: ${response.statusText}`)
     }
 
-    const arrayBuffer = await response.arrayBuffer()
-
-    const text = new TextDecoder('shift-jis').decode(arrayBuffer)
-
-    const lines = this.splitAndSanitize(text)
-
-    this.currentData.script = removeFileExtension(filename)
-
-    await this.registerAllSubroutines(lines)
-
-    return lines
+    return response
   }
 
   getFullFilePath(filename: string) {
@@ -199,6 +212,11 @@ export class KirikiriEngine {
       .flat()
   }
 
+  /**
+   * Scans the lines for subroutines and registers them.
+   *
+   * @param lines - The lines to scan.
+   */
   async registerAllSubroutines(lines: string[]) {
     if (!this.currentData.script) {
       throw new Error(`No current script set`)
@@ -228,39 +246,26 @@ export class KirikiriEngine {
 
         const subroutineName = match[1].trim()
 
-        // Get the lines of the subroutine
         const subroutineLines = lines.slice(index + 1, closingIndex)
 
         this.subroutines[this.currentData.script][subroutineName] = subroutineLines
-
-        // this.logger.info('Registered new subroutine:', subroutineName)
       }
 
       index += 1
     } while (index < lines.length)
   }
 
+  /**
+   * Handles the paused state of the engine.
+   *
+   * If the engine is paused, it will wait for the CONTINUE event to be dispatched.
+   * This allows the engine to pause execution and wait for user input or other events.
+   */
   private async handlePausedState(): Promise<void> {
     if (this.state === EngineState.PAUSED) {
       await new Promise<void>((resolve) => {
         window.addEventListener(EngineEvent.CONTINUE, () => resolve())
       })
-    }
-  }
-
-  private async handleCancelSubroutine() {
-    this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
-    this.state = EngineState.RUNNING
-    window.dispatchEvent(new CustomEvent(EngineEvent.SUBROUTINE_CANCELLED))
-  }
-
-  private async handleCancelAllSubroutines() {
-    if (this.subroutineCallStack.length === 1) {
-      this.state = EngineState.RUNNING
-      window.dispatchEvent(new CustomEvent(EngineEvent.ALL_SUBROUTINES_CANCELLED))
-    }
-    else {
-      this.logger.info(`Cancelled subroutine ${this.subroutineCallStack[this.subroutineCallStack.length - 1]}`)
     }
   }
 
@@ -340,6 +345,9 @@ export class KirikiriEngine {
     return closingIndex + 1
   }
 
+  /**
+   * Runs the specified lines of code.
+   */
   async runLines(lines: string[]): Promise<void> {
     let index = 0
 
@@ -347,11 +355,19 @@ export class KirikiriEngine {
       await this.handlePausedState()
 
       if (this.state === EngineState.CANCEL_SUBROUTINE) {
-        await this.handleCancelSubroutine()
+        this.state = EngineState.RUNNING
+        window.dispatchEvent(new CustomEvent(EngineEvent.SUBROUTINE_CANCELLED))
         return
       }
+
       if (this.state === EngineState.CANCEL_ALL_SUBROUTINES) {
-        await this.handleCancelAllSubroutines()
+        if (this.subroutineCallStack.length === 1) {
+          this.state = EngineState.RUNNING
+          window.dispatchEvent(new CustomEvent(EngineEvent.ALL_SUBROUTINES_CANCELLED))
+        }
+        else {
+          this.logger.info(`Cancelled subroutine ${this.subroutineCallStack[this.subroutineCallStack.length - 1]}`)
+        }
         return
       }
 
@@ -367,6 +383,9 @@ export class KirikiriEngine {
     } while (index < lines.length)
   }
 
+  /**
+   * Add a character to the visible text on the screen.
+   */
   async addCharacter(character: string, indent?: boolean) {
     const renderSpeed = 40
 
@@ -499,15 +518,15 @@ export class KirikiriEngine {
     this.logger.debug(`Finished subroutine ${subroutineName}. Callstack: ${this.subroutineCallStack.join(' > ')}`)
   }
 
+  /**
+   * Sends the command to cancel all running subroutines.
+   */
   private async cancelAllSubroutines() {
     return new Promise<void>((resolve) => {
-      const onCancelled = async () => {
+      window.addEventListener(EngineEvent.ALL_SUBROUTINES_CANCELLED, async () => {
         this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
-        window.removeEventListener(EngineEvent.ALL_SUBROUTINES_CANCELLED, onCancelled)
         resolve()
-      }
-
-      window.addEventListener(EngineEvent.ALL_SUBROUTINES_CANCELLED, onCancelled)
+      }, { once: true })
 
       window.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE))
       window.dispatchEvent(new CustomEvent(EngineEvent.STOP_BGM))

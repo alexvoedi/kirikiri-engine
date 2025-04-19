@@ -3,8 +3,8 @@ import type { KirikiriRenderer } from './KirikiriRenderer'
 import { Container, Sprite, Text } from 'pixi.js'
 
 interface KirikiriLayerAttributes {
-  left?: number
-  top?: number
+  x?: number
+  y?: number
   width?: number
   height?: number
   visible?: boolean
@@ -12,6 +12,13 @@ interface KirikiriLayerAttributes {
   index?: number
   frame?: string
   opacity?: number
+}
+
+interface Margins {
+  left: number
+  right: number
+  top: number
+  bottom: number
 }
 
 export class KirikiriLayer extends Container {
@@ -23,18 +30,28 @@ export class KirikiriLayer extends Container {
     label: 'fore',
   })
 
+  readonly margins?: Margins
+
   transitioning?: boolean = false
 
-  constructor(readonly renderer: KirikiriRenderer, readonly label: string) {
+  constructor(readonly renderer: KirikiriRenderer, readonly label: string, options?: {
+    margins?: Margins
+  }) {
     super({
       label,
     })
+
+    if (options) {
+      if (options.margins) {
+        this.margins = options.margins
+      }
+    }
 
     this.addChild(this.back)
     this.addChild(this.fore)
   }
 
-  setPage(page: 'back' | 'fore', element: Renderable | Container, options?: {
+  setPageElement(page: 'back' | 'fore', element: Renderable | Container, options?: {
     opacity?: number
     visible?: boolean
     x?: number
@@ -51,10 +68,10 @@ export class KirikiriLayer extends Container {
       this.visible = options.visible
 
     if (options?.x !== undefined)
-      pageObj.x = this.renderer.scale * options.x
+      pageObj.x = this.renderer.scale * (this.renderer.globalOffset.x + options.x)
 
     if (options?.y !== undefined)
-      pageObj.y = this.renderer.scale * options.y
+      pageObj.y = this.renderer.scale * (this.renderer.globalOffset.y + options.y)
 
     pageObj.addChild(element)
   }
@@ -88,10 +105,10 @@ export class KirikiriLayer extends Container {
   } & KirikiriLayerAttributes) {
     const page = this[data.page]
 
-    if (data.left !== undefined)
-      page.x = this.renderer.scale * data.left
-    if (data.top !== undefined)
-      page.y = this.renderer.scale * data.top
+    if (data.x !== undefined)
+      page.x = this.renderer.scale * ((this.margins?.left ?? 0) + data.x)
+    if (data.y !== undefined)
+      page.y = this.renderer.scale * ((this.margins?.top ?? 0) + data.y)
     if (data.opacity !== undefined)
       page.alpha = data.opacity
     if (data.visible !== undefined)

@@ -7,7 +7,7 @@ const schema = z.object({
     z.literal('default'),
     z.string().regex(/^0x[0-9a-fA-F]{6}$/, 'Invalid color format'),
   ]).optional(),
-  shadow: createBooleanSchema().optional(),
+  shadow: z.union([createBooleanSchema(), z.literal('default'), z.literal('no')]).optional(),
 }).strict()
 
 /**

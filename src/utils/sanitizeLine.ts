@@ -1,8 +1,8 @@
 /**
  * Sanitize a line.
  *
- * - Remove leading and trailing whitespace
- * - Convert tabs to spaces
+ * This function removes leading and trailing whitespace, converts tabs to spaces,
+ * removes trailing backslashes and pipes, and ensures that the line is properly formatted.
  */
 export function sanitizeLine(line: string): string {
   // Remove leading and trailing whitespace
