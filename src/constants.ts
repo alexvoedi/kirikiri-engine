@@ -68,4 +68,5 @@ export const EngineEvent = {
   CLICK: 'click',
   PAUSE_BGM: 'pausebgm',
   RESUME_BGM: 'resumebgm',
+  CHOICE: 'choice',
 }

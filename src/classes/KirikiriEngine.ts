@@ -5,6 +5,7 @@ import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
 import { createConsola } from 'consola'
 import { getCommand } from '../commands/getCommand'
 import { ifCommand } from '../commands/ifCommand'
+import { linkCommand } from '../commands/linkCommand'
 import { createMacro } from '../commands/macroCommand'
 import { scriptCommand } from '../commands/scriptCommand'
 import { EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
@@ -135,7 +136,7 @@ export class KirikiriEngine {
   }
 
   async run() {
-    this.renderer.init()
+    await this.renderer.init()
 
     await this.loadFile(this.game.entry)
 
@@ -176,9 +177,7 @@ export class KirikiriEngine {
       throw new Error(`File ${filename} not found`)
     }
 
-    const fullPath = `/ojamajo/${foundFile}`
-
-    const url = new URL(fullPath, this.game.root)
+    const url = new URL(foundFile, this.game.root)
 
     const response = await fetch(url)
 
@@ -203,9 +202,9 @@ export class KirikiriEngine {
    * Split the content into lines and sanitize them. Removes all comments.
    */
   splitAndSanitize(content: string) {
-    const lines = content.split('\n')
-
-    return lines
+    return content
+      .split('\n')
+      .filter(Boolean)
       .filter(line => !isComment(line))
       .map(line => sanitizeLine(line))
       .map(line => splitMultiCommandLine(line))
@@ -279,6 +278,7 @@ export class KirikiriEngine {
 
       case '@':
       case '[':
+        this.logger.debug(`Processing line ${index + 1}: ${line}`)
         return await this.processCommand(line, index, lines)
 
       default:
@@ -287,6 +287,13 @@ export class KirikiriEngine {
     }
   }
 
+  /**
+   * Processes a command line.
+   *
+   * @param line - The command line to process.
+   * @param index - The current line index.
+   * @param lines - The list of all lines.
+   */
   private async processCommand(line: string, index: number, lines: string[]): Promise<number> {
     const { command, props } = extractCommand(line)
 
@@ -320,6 +327,14 @@ export class KirikiriEngine {
     }
   }
 
+  /**
+   * Processes a block command.
+   *
+   * @param command - The block command to process.
+   * @param index - The current line index.
+   * @param lines - The list of all lines.
+   * @param props - The properties of the command.
+   */
   private async processBlockCommand(command: string, index: number, lines: string[], props: Record<string, string>): Promise<number> {
     const closingIndex = findClosingBlockCommandIndex(command, index, lines)
 
@@ -334,9 +349,10 @@ export class KirikiriEngine {
       case 'iscript':
         await scriptCommand(this, blockLines, props)
         break
-      case 'link':
-        // todo
+      case 'link': {
+        await linkCommand(this, blockLines, props)
         break
+      }
       case 'if':
         await ifCommand(this, { ...props, lines: blockLines })
         break

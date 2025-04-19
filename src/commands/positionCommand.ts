@@ -1,6 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 import { createBooleanSchema, createIntegerSchema, createPageSchema } from '../schemas'
+import { scaleRange } from '../utils/scaleRange'
 
 const schema = z.object({
   layer: z.string().optional().default('message0'),
@@ -11,7 +12,7 @@ const schema = z.object({
   height: createIntegerSchema().optional(),
   visible: createBooleanSchema().optional(),
   frame: z.string().optional(),
-  opacity: createIntegerSchema(0, 255).optional(),
+  opacity: createIntegerSchema(0, 255).transform(v => scaleRange(v, 0, 255, 0, 1)).optional(),
 }).strict()
 
 export async function positionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {

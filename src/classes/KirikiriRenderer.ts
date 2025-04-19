@@ -391,11 +391,11 @@ export class KirikiriRenderer {
   clearMessageLayers() {
     [this.message0, this.message1].forEach((layer) => {
       layer.fore.removeChildren()
-      layer.fore.alpha = 255
+      layer.fore.alpha = 1
       layer.fore.visible = true
 
       layer.back.removeChildren()
-      layer.back.alpha = 255
+      layer.back.alpha = 1
       layer.back.visible = true
     })
   }
@@ -525,6 +525,47 @@ export class KirikiriRenderer {
     })
 
     this[this.currentMessageLayer][this.currentMessagePage].addChild(buttonNormal)
+  }
+
+  /**
+   * Add a link to the message layer.
+   */
+  addLink(text: string, onClick: () => void) {
+    const y = this[this.currentMessageLayer][this.currentMessagePage].children.reduce((acc, child) => {
+      if (child instanceof Text) {
+        return acc + child.height
+      }
+      return acc
+    }, 0)
+
+    const element = new Text({
+      text,
+      label: 'link',
+      style: {
+        fontSize: this.app.screen.height / 35,
+        fill: 0xFFFFFF,
+        fontFamily: 'Kiwi Maru',
+        wordWrap: true,
+        breakWords: true,
+        wordWrapWidth: this.app.screen.width,
+      },
+      x: this.location.x,
+      y,
+    })
+
+    element.interactive = true
+
+    element.on('pointerover', () => {
+      element.style.fill = 0xFF0000
+    })
+
+    element.on('pointerout', () => {
+      element.style.fill = 0xFFFFFF
+    })
+
+    element.on('pointerup', onClick)
+
+    this[this.currentMessageLayer][this.currentMessagePage].addChild(element)
   }
 
   clearMessageLayerPages() {

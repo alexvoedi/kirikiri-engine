@@ -63,4 +63,18 @@ describe('findClosingBlockCommandIndex', () => {
     expect(findClosingBlockCommandIndex('if', 1, lines)).toBe(3)
     expect(findClosingBlockCommandIndex('if', 4, lines)).toBe(6)
   })
+
+  it('only finds the first block if there are multiple blocks', () => {
+    const lines = [
+      '[link target="choice1"]',
+      'Choice 1',
+      '[endlink]',
+      '[link target="choice2]',
+      'Choice 2',
+      '[endlink]',
+    ]
+
+    expect(findClosingBlockCommandIndex('link', 0, lines)).toBe(2)
+    expect(findClosingBlockCommandIndex('link', 3, lines)).toBe(5)
+  })
 })

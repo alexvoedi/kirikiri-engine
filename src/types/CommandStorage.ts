@@ -1,3 +1,5 @@
+import type { LinkCommandProps } from '../commands/linkCommand'
+
 export interface CommandStorage {
   playse?: {
     playing?: boolean
@@ -37,5 +39,11 @@ export interface CommandStorage {
   }
   clickskip?: {
     enabled?: boolean
+  }
+  link?: {
+    choices?: Array<{
+      text: string
+      data: LinkCommandProps
+    }>
   }
 }

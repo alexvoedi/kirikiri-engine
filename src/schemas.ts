@@ -25,7 +25,7 @@ export function createIntegerSchema(min?: number, max?: number): z.ZodSchema<num
 }
 
 export function createGammaSchema() {
-  return createFloatSchema(0.1, 9.9).transform(v => scaleRange(v, 0.1, 9.9, 0, 255))
+  return createFloatSchema(0.1, 9.9).transform(v => Math.round(scaleRange(v, 0.1, 9.9, 0, 255)))
 }
 
 export function createPageSchema() {

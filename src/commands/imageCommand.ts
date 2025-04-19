@@ -1,6 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 import { createBooleanSchema, createGammaSchema, createIntegerSchema } from '../schemas'
+import { scaleRange } from '../utils/scaleRange'
 
 const schema = z.object({
   ggamma: createGammaSchema().optional(),
@@ -8,7 +9,7 @@ const schema = z.object({
   index: createIntegerSchema().default(0).optional(),
   layer: z.string(),
   left: createIntegerSchema().optional(),
-  opacity: createIntegerSchema(0, 255).optional(),
+  opacity: createIntegerSchema(0, 255).transform(v => scaleRange(v, 0, 255, 0, 1)).optional(),
   page: z.enum(['back', 'fore']).optional().default('fore'),
   rgamma: createGammaSchema().optional(),
   storage: z.string(),
