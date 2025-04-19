@@ -5,6 +5,19 @@ import { KirikiriLayer } from './KirikiriLayer'
 export class KirikiriRenderer {
   readonly app: Application
 
+  /**
+   * The original resolution of the canvas.
+   */
+  readonly RESOLUTION = {
+    WIDTH: 800,
+    HEIGHT: 600,
+  }
+
+  /**
+   * The internal upscaling factor for modern displays.
+   */
+  readonly SCALE = 2
+
   private base!: KirikiriLayer
   private front!: Container<KirikiriLayer>
   private message0!: KirikiriLayer
@@ -58,8 +71,8 @@ export class KirikiriRenderer {
 
   async init() {
     await this.app.init({
-      width: 1600,
-      height: 1200,
+      width: 2 * this.RESOLUTION.WIDTH,
+      height: 2 * this.RESOLUTION.HEIGHT,
       canvas: this.canvas,
     })
 
@@ -84,8 +97,11 @@ export class KirikiriRenderer {
     this.app.stage.addChild(this.message1)
   }
 
-  get scale() {
-    return this.app.stage.width / 800
+  /**
+   * This is the actual resolution of the canvas.
+   */
+  get renderedWidth() {
+    return this.SCALE * this.RESOLUTION.WIDTH
   }
 
   async setImage(data: {
@@ -243,42 +259,14 @@ export class KirikiriRenderer {
     })
   }
 
-  setText(text: string) {
-    const textElement = this.message0.fore.getChildByLabel('textelement') as Text
-
-    if (textElement) {
-      textElement.text = text
-    }
-    else {
-      const textElement = new Text({
-        text,
-        label: 'textelement',
-        style: {
-          fontSize: this.app.screen.height / 35,
-          fill: 0xFFFFFF,
-          fontFamily: 'Kiwi Maru',
-          wordWrap: true,
-          breakWords: true,
-          wordWrapWidth: this.app.screen.width,
-        },
-        x: this.location.x,
-        y: this.location.y,
-      })
-
-      this.resetLocation()
-
-      this.message0.setPageElement('fore', textElement)
-    }
-  }
-
   addCharacterToText(character: string, indent?: boolean) {
     let textContainer = this.message0.fore.getChildByLabel('text-container') as Container
 
     if (!textContainer) {
       textContainer = new Container({
         label: 'text-container',
-        x: this.scale * (this.messageLayerMargins.left + this.location.x),
-        y: this.scale * (this.messageLayerMargins.top + this.location.y),
+        x: this.SCALE * (this.messageLayerMargins.left + this.location.x),
+        y: this.SCALE * (this.messageLayerMargins.top + this.location.y),
       })
 
       this.message0.setPageElement('fore', textContainer, {
@@ -304,9 +292,12 @@ export class KirikiriRenderer {
           text: character,
           label: 'text-1',
           style: {
-            fontSize: this.app.screen.height / 28,
-            fill: 0xFFFFFF,
             fontFamily: 'Kiwi Maru',
+            fontSize: 48,
+            fill: 0xFFFFFF,
+            breakWords: true,
+            wordWrap: true,
+            wordWrapWidth: this.wordWrapWidth - speakerElement.width,
           },
           x: speakerElement.x + speakerElement.width,
           y: speakerElement.y,
@@ -326,15 +317,26 @@ export class KirikiriRenderer {
           text: character,
           label: 'text-0',
           style: {
-            fontSize: this.app.screen.height / 28,
-            fill: 0xFFFFFF,
             fontFamily: 'Kiwi Maru',
+            fontSize: 48,
+            fill: 0xFFFFFF,
+            breakWords: true,
+            wordWrap: true,
+            wordWrapWidth: this.wordWrapWidth,
           },
         })
 
         textContainer.addChild(textElement)
       }
     }
+  }
+
+  /**
+   * Calculate the word wrap width for the message box.
+   */
+  get wordWrapWidth() {
+    // the number should not be hardcoded
+    return 2 * 768 - this.SCALE * (2 * this.globalOffset.x + this.messageLayerMargins.left + this.messageLayerMargins.right)
   }
 
   setFont(data: {
@@ -494,10 +496,10 @@ export class KirikiriRenderer {
     const buttonNormal = new Sprite({
       texture: baseTexture,
       label: file,
-      width: this.scale * width,
-      height: this.scale * height,
-      x: this.scale * (this.globalOffset.x + this.messageLayerMargins.left + this.location.x),
-      y: this.scale * (this.globalOffset.y + this.messageLayerMargins.top + this.location.y),
+      width: this.SCALE * width,
+      height: this.SCALE * height,
+      x: this.SCALE * (this.globalOffset.x + this.messageLayerMargins.left + this.location.x),
+      y: this.SCALE * (this.globalOffset.y + this.messageLayerMargins.top + this.location.y),
     })
 
     this.resetLocation()
@@ -544,7 +546,7 @@ export class KirikiriRenderer {
       style: {
         fontSize: this.app.screen.height / 35,
         fill: 0xFFFFFF,
-        fontFamily: 'Kiwi Maru',
+        fontFamily: 'Japanese',
         wordWrap: true,
         breakWords: true,
         wordWrapWidth: this.app.screen.width,

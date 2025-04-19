@@ -177,7 +177,7 @@ export class KirikiriEngine {
       throw new Error(`File ${filename} not found`)
     }
 
-    const url = new URL(foundFile, this.game.root)
+    const url = new URL(foundFile, this.game.root.endsWith('/') ? this.game.root : `${this.game.root}/`)
 
     const response = await fetch(url)
 

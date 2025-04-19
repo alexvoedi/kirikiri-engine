@@ -68,10 +68,10 @@ export class KirikiriLayer extends Container {
       this.visible = options.visible
 
     if (options?.x !== undefined)
-      pageObj.x = this.renderer.scale * (this.renderer.globalOffset.x + options.x)
+      pageObj.x = this.renderer.SCALE * (this.renderer.globalOffset.x + options.x)
 
     if (options?.y !== undefined)
-      pageObj.y = this.renderer.scale * (this.renderer.globalOffset.y + options.y)
+      pageObj.y = this.renderer.SCALE * (this.renderer.globalOffset.y + options.y)
 
     pageObj.addChild(element)
   }
@@ -106,17 +106,17 @@ export class KirikiriLayer extends Container {
     const page = this[data.page]
 
     if (data.x !== undefined)
-      page.x = this.renderer.scale * ((this.margins?.left ?? 0) + data.x)
+      page.x = this.renderer.SCALE * ((this.margins?.left ?? 0) + data.x)
     if (data.y !== undefined)
-      page.y = this.renderer.scale * ((this.margins?.top ?? 0) + data.y)
+      page.y = this.renderer.SCALE * ((this.margins?.top ?? 0) + data.y)
     if (data.opacity !== undefined)
       page.alpha = data.opacity
     if (data.visible !== undefined)
       page.visible = data.visible
     if (data.width !== undefined)
-      page.width = this.renderer.scale * data.width
+      page.width = this.renderer.SCALE * data.width
     if (data.height !== undefined)
-      page.height = this.renderer.scale * data.height
+      page.height = this.renderer.SCALE * data.height
   }
 
   setLayerAttributes(data: {
