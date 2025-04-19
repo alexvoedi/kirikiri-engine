@@ -12,19 +12,16 @@ export function createBooleanSchema(): z.Schema<boolean, ZodTypeDef, string | bo
   })
 }
 
-export function createIntegerSchema(min?: number, max?: number): z.ZodSchema<number> {
-  return z.coerce.number()
-    .refine(value => Number.isInteger(value), { message: 'Value must be an integer' })
-    .refine(value => !Number.isNaN(value), { message: 'Value must be a number' })
-    .refine(value => min !== undefined ? value >= min : true, { message: `Value must be greater than or equal to ${min}` })
-    .refine(value => max !== undefined ? value <= max : true, { message: `Value must be less than or equal to ${max}` })
-}
-
 export function createFloatSchema(min?: number, max?: number): z.ZodSchema<number> {
   return z.coerce.number()
     .refine(value => !Number.isNaN(value), { message: 'Value must be a number' })
     .refine(value => min !== undefined ? value >= min : true, { message: `Value must be greater than or equal to ${min}` })
     .refine(value => max !== undefined ? value <= max : true, { message: `Value must be less than or equal to ${max}` })
+}
+
+export function createIntegerSchema(min?: number, max?: number): z.ZodSchema<number> {
+  return createFloatSchema(min, max)
+    .refine(value => Number.isInteger(value), { message: 'Value must be an integer' })
 }
 
 export function createGammaSchema() {
