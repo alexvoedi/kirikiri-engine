@@ -34,13 +34,6 @@ export class KirikiriLayer extends Container {
     this.addChild(this.fore)
   }
 
-  resize(width: number, height: number) {
-    this.children.forEach((child) => {
-      child.width = width
-      child.height = height
-    })
-  }
-
   setPage(page: 'back' | 'fore', element: Renderable | Container, options?: {
     opacity?: number
     visible?: boolean

@@ -22,23 +22,17 @@ export class KirikiriRenderer {
     }
 
   constructor(
-    private readonly container: HTMLDivElement,
+    private readonly canvas: HTMLCanvasElement,
   ) {
     this.app = new Application()
   }
 
   async init() {
     await this.app.init({
-      resizeTo: this.container,
+      width: 1600,
+      height: 1200,
+      canvas: this.canvas,
     })
-
-    window.addEventListener('resize', () => {
-      this.getLayersArr().forEach((layer) => {
-        layer.resize(this.app.screen.width, this.app.screen.height)
-      })
-    })
-
-    this.container.appendChild(this.app.canvas)
 
     this.base = new KirikiriLayer(this, 'base')
     this.app.stage.addChild(this.base)

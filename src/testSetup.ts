@@ -16,7 +16,7 @@ export async function setupEngine(): Promise<KirikiriEngine> {
     files: mockFiles(),
   }
 
-  const container = document.createElement('div')
+  const canvas = document.createElement('canvas')
 
-  return new KirikiriEngine({ container, game })
+  return new KirikiriEngine({ canvas, game })
 }

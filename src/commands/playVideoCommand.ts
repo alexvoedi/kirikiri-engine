@@ -24,8 +24,9 @@ export async function playVideoCommand(engine: KirikiriEngine, props?: Record<st
   video.style.height = '100%'
   video.style.pointerEvents = 'none'
   video.autoplay = false
+  video.style.backgroundColor = 'black'
 
-  engine.container.append(video)
+  document.body.append(video)
 
   return new Promise((resolve) => {
     video.addEventListener('canplaythrough', () => {
@@ -33,7 +34,7 @@ export async function playVideoCommand(engine: KirikiriEngine, props?: Record<st
     })
 
     video.addEventListener('ended', () => {
-      engine.container.removeChild(video)
+      document.body.removeChild(video)
       resolve()
     })
   })

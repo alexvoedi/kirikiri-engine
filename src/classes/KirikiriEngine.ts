@@ -26,7 +26,7 @@ export class KirikiriEngine {
   /**
    * Container element where the game will be rendered.
    */
-  readonly container: HTMLDivElement
+  readonly canvas: HTMLCanvasElement
 
   /**
    * Game data.
@@ -105,19 +105,19 @@ export class KirikiriEngine {
    */
   readonly text: string = ''
 
-  constructor({ container, game, options }: {
-    container: HTMLDivElement
+  constructor({ canvas, game, options }: {
+    canvas: HTMLCanvasElement
     game: Game
     options?: KirikiriEngineOptions
   }) {
-    this.container = container
+    this.canvas = canvas
     this.game = game
 
     this.options = options || {
       loglevel: 0,
     }
 
-    this.renderer = new KirikiriRenderer(container)
+    this.renderer = new KirikiriRenderer(canvas)
 
     this.logger = createConsola({
       fancy: true,
