@@ -117,10 +117,10 @@ export class KirikiriRenderer {
 
     const texture = await Assets.load(file)
     const sprite = new Sprite({
+      label: file,
       texture,
       width: this.app.screen.width,
       height: this.app.screen.height,
-      label: file,
     })
 
     const layerGroup = this.getOrCreateLayer(layer)
@@ -263,10 +263,10 @@ export class KirikiriRenderer {
     let textContainer = this[this.currentMessageLayer][this.currentMessagePage].getChildByLabel('text-container') as Container
 
     if (!textContainer) {
+      console.log(this.location)
       textContainer = new Container({
         label: 'text-container',
-        x: this.SCALE * (this.messageLayerMargins.left + this.location.x),
-        y: this.SCALE * (this.messageLayerMargins.top + this.location.y),
+        y: this.SCALE * this.messageLayerMargins.top, // this is intentional
       })
 
       this[this.currentMessageLayer].setPageElement(this.currentMessagePage, textContainer)

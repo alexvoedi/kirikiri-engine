@@ -35,4 +35,8 @@ describe('removeFileExtension', () => {
     expect(removeFileExtension('.')).toBe('.')
     expect(removeFileExtension('..')).toBe('..')
   })
+
+  it('should only remove real file extensions', () => {
+    expect(removeFileExtension('4-0025.3')).toBe('4-0025.3')
+  })
 })

@@ -13,8 +13,12 @@ export function removeFileExtension(file: string) {
     return file
   }
 
+  // Ensure the part after the last dot is a valid file extension starting with a letter
   if (lastDotIndex > lastSlashIndex) {
-    return file.slice(0, lastDotIndex)
+    const extension = file.slice(lastDotIndex + 1)
+    if (/^[a-z][a-z0-9]*$/i.test(extension)) {
+      return file.slice(0, lastDotIndex)
+    }
   }
 
   return file
