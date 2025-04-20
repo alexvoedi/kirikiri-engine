@@ -29,7 +29,7 @@ export async function playVideoCommand(engine: KirikiriEngine, props?: Record<st
   document.body.append(video)
 
   return new Promise((resolve) => {
-    video.addEventListener('canplaythrough', () => {
+    video.addEventListener('canplay', () => {
       video.play()
     })
 

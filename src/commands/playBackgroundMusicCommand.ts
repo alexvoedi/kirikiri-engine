@@ -82,7 +82,7 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
   })
 
   return new Promise((resolve) => {
-    audio.addEventListener('canplaythrough', () => {
+    audio.addEventListener('canplay', () => {
       merge(engine.commandStorage, {
         playbgm: {
           playing: true,

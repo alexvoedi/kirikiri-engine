@@ -49,7 +49,7 @@ export async function playSoundEffectCommand(engine: KirikiriEngine, props?: Rec
   })
 
   return new Promise((resolve) => {
-    audio.addEventListener('canplaythrough', () => {
+    audio.addEventListener('canplay', () => {
       merge(engine.commandStorage, {
         playse: {
           playing: true,
