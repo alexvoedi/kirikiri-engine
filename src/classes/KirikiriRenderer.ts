@@ -442,6 +442,7 @@ export class KirikiriRenderer {
    */
   moveAndChangeOpacity({ layer, ...rest }: {
     layer: string
+    page: 'back' | 'fore'
     time: number
     path: Array<{
       x: number

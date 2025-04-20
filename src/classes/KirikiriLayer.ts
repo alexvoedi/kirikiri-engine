@@ -47,6 +47,9 @@ export class KirikiriLayer extends Container {
       }
     }
 
+    this.back.blendMode = 'soft-light'
+    this.fore.blendMode = 'soft-light'
+
     this.addChild(this.back)
     this.addChild(this.fore)
   }
@@ -62,10 +65,10 @@ export class KirikiriLayer extends Container {
     pageObj.removeChildren()
 
     if (options?.opacity !== undefined)
-      this.alpha = options.opacity
+      pageObj.alpha = options.opacity
 
     if (options?.visible !== undefined)
-      this.visible = options.visible
+      pageObj.visible = options.visible
 
     if (options?.x !== undefined)
       pageObj.x = this.renderer.SCALE * (this.renderer.globalOffset.x + options.x)
@@ -138,10 +141,12 @@ export class KirikiriLayer extends Container {
    * Moves the layer and changes its opacity over a specified time.
    *
    * @param time - An object containing the total time and the movement path.
+   * @param time.page - The page to move ('back' or 'fore').
    * @param time.time - The total time in milliseconds for the movement and opacity change.
    * @param time.path - An array of points defining the movement path, each with x, y, and opacity.
    */
-  moveAndChangeOpacity({ time, path }: {
+  moveAndChangeOpacity({ page, time, path }: {
+    page: 'back' | 'fore'
     time: number
     path: Array<{
       x: number
@@ -154,14 +159,16 @@ export class KirikiriLayer extends Container {
       return
     }
 
+    const pageObj = this[page]
+
     const totalTime = time
 
     let elapsedTime = 0
 
     if (path.length === 1) {
-      const startX = this.x
-      const startY = this.y
-      const startAlpha = this.alpha
+      const startX = pageObj.x
+      const startY = pageObj.y
+      const startAlpha = pageObj.alpha
 
       const target = path[0]
 
@@ -171,15 +178,15 @@ export class KirikiriLayer extends Container {
         const progress = Math.min(elapsedTime / totalTime, 1)
 
         if (startX !== target.x) {
-          this.x = this.interpolate(startX, target.x, progress)
+          pageObj.x = this.interpolate(startX, target.x, progress)
         }
 
         if (startY !== target.y) {
-          this.y = this.interpolate(startY, target.y, progress)
+          pageObj.y = this.interpolate(startY, target.y, progress)
         }
 
         if (startAlpha !== target.opacity) {
-          this.alpha = this.interpolate(startAlpha, target.opacity, progress)
+          pageObj.alpha = this.interpolate(startAlpha, target.opacity, progress)
         }
 
         if (progress >= 1) {
@@ -206,15 +213,15 @@ export class KirikiriLayer extends Container {
       const nextPoint = path[segmentIndex + 1]
 
       if (nextPoint) {
-        this.x = this.interpolate(currentPoint.x, nextPoint.x, segmentProgress)
-        this.y = this.interpolate(currentPoint.y, nextPoint.y, segmentProgress)
-        this.alpha = this.interpolate(currentPoint.opacity, nextPoint.opacity, segmentProgress)
+        pageObj.x = this.interpolate(currentPoint.x, nextPoint.x, segmentProgress)
+        pageObj.y = this.interpolate(currentPoint.y, nextPoint.y, segmentProgress)
+        pageObj.alpha = this.interpolate(currentPoint.opacity, nextPoint.opacity, segmentProgress)
       }
 
       if (progress >= 1) {
-        this.x = path[path.length - 1].x
-        this.y = path[path.length - 1].y
-        this.alpha = path[path.length - 1].opacity
+        pageObj.x = path[path.length - 1].x
+        pageObj.y = path[path.length - 1].y
+        pageObj.alpha = path[path.length - 1].opacity
 
         const waitForMoveNotifier = new CustomEvent('wm')
         setTimeout(() => {
