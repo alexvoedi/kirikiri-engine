@@ -6,13 +6,11 @@ export default defineConfig([
     format: ['esm', 'cjs'],
     dts: true,
     sourcemap: true,
-    treeshake: true,
   },
   {
     entry: ['src/cli.ts'],
     format: ['esm', 'cjs'],
     dts: true,
     sourcemap: true,
-    treeshake: true,
   },
 ])

@@ -6,16 +6,14 @@ const schema = z.object({}).strict()
 /**
  * Implements the `l` command.
  *
- * Waits for a click.
+ * Waits for a click after showing text.
  */
 export async function waitForTextClickCommand(_: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
   return new Promise((resolve) => {
-    const onClick = () => {
-      window.removeEventListener('click', onClick)
+    window.addEventListener('click', () => {
       resolve()
-    }
-    window.addEventListener('click', onClick)
+    }, { once: true })
   })
 }

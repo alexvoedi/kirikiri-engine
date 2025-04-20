@@ -13,6 +13,5 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     passWithNoTests: true,
-    pool: 'forks',
   },
 })

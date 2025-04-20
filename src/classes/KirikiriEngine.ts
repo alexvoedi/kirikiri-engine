@@ -402,15 +402,18 @@ export class KirikiriEngine {
   /**
    * Add a character to the visible text on the screen.
    */
-  async addCharacter(character: string, indent?: boolean) {
+  async addCharacter(character: string, options?: {
+    indent?: boolean
+    skip?: boolean
+  }) {
     const renderSpeed = 40
 
     return new Promise<void>((resolve) => {
-      this.renderer.addCharacterToText(character, indent)
+      this.renderer.addCharacterToText(character, options?.indent)
 
       setTimeout(() => {
         resolve()
-      }, renderSpeed)
+      }, options?.skip ? 0 : renderSpeed)
     })
   }
 
@@ -418,17 +421,17 @@ export class KirikiriEngine {
    * Process text.
    */
   async processText(text: string) {
-    // let skip = false
+    let skip = false
 
-    // const onClick = () => {
-    //   skip = true
-    // }
+    const onClick = () => {
+      skip = true
+    }
 
-    // if (this.commandStorage.clickskip?.enabled) {
-    //   window.addEventListener('click', () => {
-    //     onClick()
-    //   }, { once: true })
-    // }
+    if (this.commandStorage.clickskip?.enabled) {
+      window.addEventListener('click', () => {
+        onClick()
+      }, { once: true })
+    }
 
     let index = 0
     let indent = false
@@ -436,6 +439,7 @@ export class KirikiriEngine {
       const character = text.charAt(index)
 
       const { length, commands } = extractCommands(text.slice(index))
+
       if (commands.length) {
         for (const { command, props } of commands) {
           try {
@@ -446,7 +450,7 @@ export class KirikiriEngine {
               indent = false
             }
             else if (command === 'r') {
-              await this.addCharacter('\n', indent)
+              await this.addCharacter('\n', { indent, skip })
             }
             else {
               const macro = this.macros[command]
@@ -475,14 +479,14 @@ export class KirikiriEngine {
         continue
       }
 
-      await this.addCharacter(character, indent)
+      await this.addCharacter(character, { indent, skip })
 
       index += 1
     }
 
-    // if (this.commandStorage.clickskip?.enabled) {
-    //   window.removeEventListener('click', onClick)
-    // }
+    if (this.commandStorage.clickskip?.enabled) {
+      window.removeEventListener('click', onClick)
+    }
   }
 
   /**

@@ -260,7 +260,7 @@ export class KirikiriRenderer {
   }
 
   addCharacterToText(character: string, indent?: boolean) {
-    let textContainer = this.message0.fore.getChildByLabel('text-container') as Container
+    let textContainer = this[this.currentMessageLayer][this.currentMessagePage].getChildByLabel('text-container') as Container
 
     if (!textContainer) {
       textContainer = new Container({
@@ -269,8 +269,11 @@ export class KirikiriRenderer {
         y: this.SCALE * (this.messageLayerMargins.top + this.location.y),
       })
 
-      this.message0.setPageElement('fore', textContainer, {
-      })
+      this[this.currentMessageLayer].setPageElement(this.currentMessagePage, textContainer)
+
+      // whenever we write text, we must make sure that the layer is visible
+      this[this.currentMessageLayer][this.currentMessagePage].alpha = 1
+      this[this.currentMessageLayer][this.currentMessagePage].visible = true
 
       this.resetLocation()
     }
@@ -343,7 +346,7 @@ export class KirikiriRenderer {
     color?: string
     shadow?: boolean | 'default' | 'no'
   }) {
-    const textElement = this.message0.fore.getChildByLabel('textelement') as Text
+    const textElement = this[this.currentMessageLayer][this.currentMessagePage].getChildByLabel('textelement') as Text
 
     if (textElement) {
       if (data.color && data.color !== 'default') {
@@ -388,21 +391,6 @@ export class KirikiriRenderer {
   }
 
   /**
-   * Remove all children from the fore and back of all message layers.
-   */
-  clearMessageLayers() {
-    [this.message0, this.message1].forEach((layer) => {
-      layer.fore.removeChildren()
-      layer.fore.alpha = 1
-      layer.fore.visible = true
-
-      layer.back.removeChildren()
-      layer.back.alpha = 1
-      layer.back.visible = true
-    })
-  }
-
-  /**
    * Remove all children from the specified layer.
    */
   clearLayer(layer: string, page?: 'back' | 'fore') {
@@ -417,15 +405,33 @@ export class KirikiriRenderer {
     }
   }
 
+  clearMessageLayerPages() {
+    [this.message0, this.message1].forEach((layer) => {
+      layer.fore.removeChildren()
+      layer.back.removeChildren()
+    })
+  }
+
   /**
-   * Clear text command
+   * Remove all children from the fore and back of all message layers.
+   */
+  clearMessageLayers() {
+    this.clearMessageLayerPages();
+
+    [this.message0, this.message1].forEach((layer) => {
+      layer.fore.alpha = 1
+      layer.fore.visible = true
+
+      layer.back.alpha = 1
+      layer.back.visible = true
+    })
+  }
+
+  /**
+   * Clear all message layers and reset the current message layer and page.
    */
   clearText() {
-    this.message0.back.removeChildren()
-    this.message0.fore.removeChildren()
-
-    this.message1.back.removeChildren()
-    this.message1.fore.removeChildren()
+    this.clearMessageLayers()
 
     this.currentMessageLayer = 'message0'
     this.currentMessagePage = 'fore'
@@ -568,14 +574,6 @@ export class KirikiriRenderer {
     element.on('pointerup', onClick)
 
     this[this.currentMessageLayer][this.currentMessagePage].addChild(element)
-  }
-
-  clearMessageLayerPages() {
-    this.message0.fore.removeChildren()
-    this.message0.back.removeChildren()
-
-    this.message1.fore.removeChildren()
-    this.message1.back.removeChildren()
   }
 
   /**
