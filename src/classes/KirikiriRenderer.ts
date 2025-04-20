@@ -263,7 +263,6 @@ export class KirikiriRenderer {
     let textContainer = this[this.currentMessageLayer][this.currentMessagePage].getChildByLabel('text-container') as Container
 
     if (!textContainer) {
-      console.log(this.location)
       textContainer = new Container({
         label: 'text-container',
         y: this.SCALE * this.messageLayerMargins.top, // this is intentional
@@ -295,11 +294,7 @@ export class KirikiriRenderer {
           text: character,
           label: 'text-1',
           style: {
-            fontFamily: 'Kiwi Maru',
-            fontSize: 48,
-            fill: 0xFFFFFF,
-            breakWords: true,
-            wordWrap: true,
+            ...this.textStyle,
             wordWrapWidth: this.wordWrapWidth - speakerElement.width,
           },
           x: speakerElement.x + speakerElement.width,
@@ -319,14 +314,7 @@ export class KirikiriRenderer {
         const textElement = new Text({
           text: character,
           label: 'text-0',
-          style: {
-            fontFamily: 'Kiwi Maru',
-            fontSize: 48,
-            fill: 0xFFFFFF,
-            breakWords: true,
-            wordWrap: true,
-            wordWrapWidth: this.wordWrapWidth,
-          },
+          style: this.textStyle,
         })
 
         textContainer.addChild(textElement)
@@ -550,14 +538,7 @@ export class KirikiriRenderer {
     const element = new Text({
       text,
       label: 'link',
-      style: {
-        fontSize: this.app.screen.height / 35,
-        fill: 0xFFFFFF,
-        fontFamily: 'Japanese',
-        wordWrap: true,
-        breakWords: true,
-        wordWrapWidth: this.app.screen.width,
-      },
+      style: this.textStyle,
       x: this.location.x,
       y,
     })
@@ -611,5 +592,16 @@ export class KirikiriRenderer {
     traverse(this.app.stage, 0)
 
     return tree.join('\n')
+  }
+
+  get textStyle() {
+    return {
+      fontFamily: 'Kiwi Maru',
+      fontSize: 48,
+      fill: 0xFFFFFF,
+      breakWords: true,
+      wordWrap: true,
+      wordWrapWidth: this.wordWrapWidth,
+    }
   }
 }
