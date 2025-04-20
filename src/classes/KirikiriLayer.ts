@@ -47,9 +47,6 @@ export class KirikiriLayer extends Container {
       }
     }
 
-    this.back.blendMode = 'soft-light'
-    this.fore.blendMode = 'soft-light'
-
     this.addChild(this.back)
     this.addChild(this.fore)
   }
