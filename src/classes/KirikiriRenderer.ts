@@ -97,6 +97,13 @@ export class KirikiriRenderer {
     this.app.stage.addChild(this.message1)
   }
 
+  async loadAssets(files: string[], batchSize: number = 10) {
+    for (let i = 0; i < files.length; i += batchSize) {
+      const batch = files.slice(i, i + batchSize)
+      await Assets.load(batch)
+    }
+  }
+
   /**
    * This is the actual resolution of the canvas.
    */
@@ -115,7 +122,8 @@ export class KirikiriRenderer {
   }) {
     const { file, layer, page, opacity, visible, x, y } = data
 
-    const texture = await Assets.load(file)
+    const texture = Assets.get(file)
+
     const sprite = new Sprite({
       label: file,
       texture,
@@ -177,44 +185,30 @@ export class KirikiriRenderer {
     time: number
     children?: boolean
   }) {
-    const fadeStep = 1000 / (options.time * 60)
-
     const layers = this.getLayersArr()
 
-    let timer = 1
-    const iterate = (delta: { deltaTime: number }) => {
-      const dt = fadeStep * delta.deltaTime
-
-      if (options.children) {
-        layers.forEach(layer => layer.transition(dt))
-      }
-      else {
-        this.base.transition(dt)
-      }
-
-      timer -= fadeStep * delta.deltaTime
-
-      if (timer <= 0) {
-        window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
-
-        this.app.ticker.remove(iterate)
-      }
+    if (options.children) {
+      layers.forEach(layer => layer.transition(options.time))
+    }
+    else {
+      this.base.transition(options.time)
     }
 
     const onStopTransition = () => {
-      this.app.ticker.remove(iterate)
-
-      layers.forEach(layer => layer.stopTransition())
-
       window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
-      window.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
     }
 
-    iterate({ deltaTime: 0 })
+    const timeout = setTimeout(() => {
+      window.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
 
-    window.addEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
+      window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
+    }, options.time)
 
-    this.app.ticker.add(iterate)
+    window.addEventListener(EngineEvent.STOP_TRANSITION, () => {
+      clearTimeout(timeout)
+
+      window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
+    }, { once: true })
   }
 
   setPosition({
@@ -528,7 +522,7 @@ export class KirikiriRenderer {
    * Add a link to the message layer.
    */
   addLink(text: string, onClick: () => void) {
-    const y = this[this.currentMessageLayer][this.currentMessagePage].children.reduce((acc, child) => {
+    const topOffset = this[this.currentMessageLayer][this.currentMessagePage].children.reduce((acc, child) => {
       if (child instanceof Text) {
         return acc + child.height
       }
@@ -540,7 +534,7 @@ export class KirikiriRenderer {
       label: 'link',
       style: this.textStyle,
       x: this.location.x,
-      y,
+      y: topOffset + this.SCALE * this.messageLayerMargins.top,
     })
 
     element.interactive = true

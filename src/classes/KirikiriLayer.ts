@@ -1,6 +1,7 @@
 import type { Renderable } from 'pixi.js'
 import type { KirikiriRenderer } from './KirikiriRenderer'
-import { Container, Sprite, Text } from 'pixi.js'
+import { Container, Sprite } from 'pixi.js'
+import { EngineEvent } from '../constants'
 
 interface KirikiriLayerAttributes {
   x?: number
@@ -76,14 +77,39 @@ export class KirikiriLayer extends Container {
     pageObj.addChild(element)
   }
 
-  transition(dt: number) {
+  /**
+   * Transition between between the fore and back. The fore layer slowly fades out such that the back layer is visible. If both layers are the same, it will skip the transition.
+   */
+  transition(duration: number) {
     this.transitioning = true
 
-    this.fore.alpha -= dt
-
-    if (this.fore.alpha <= 0) {
+    if (this.foreAndBackAreSame()) {
       this.stopTransition()
+      return
     }
+
+    const step = 1000 / (duration * 60)
+
+    let progress = 0
+    const iterate = (delta: { deltaTime: number }) => {
+      progress = Math.min(progress + delta.deltaTime * step, 1)
+
+      this.fore.alpha = 1 - this.smoothstep(progress)
+
+      if (progress >= 1) {
+        this.renderer.app.ticker.remove(iterate)
+
+        this.stopTransition()
+      }
+    }
+
+    window.addEventListener(EngineEvent.STOP_TRANSITION, () => {
+      this.renderer.app.ticker.remove(iterate)
+
+      this.stopTransition()
+    }, { once: true })
+
+    this.renderer.app.ticker.add(iterate)
   }
 
   stopTransition() {
@@ -128,10 +154,6 @@ export class KirikiriLayer extends Container {
       this.zIndex = data.index
     if (data.visible !== undefined)
       this.visible = data.visible
-  }
-
-  reset() {
-    // todo
   }
 
   /**
@@ -237,40 +259,66 @@ export class KirikiriLayer extends Container {
   }
 
   /**
-   * Copies all children properties from the front layer to the back layer. Does not remove them from the front layer.
+   * Copies all children properties from the front layer to the back layer.
    */
   copyFrontToBack() {
-    for (const fore of this.fore.children) {
-      const data = {
-        label: fore.label,
-        position: fore.position,
-        scale: fore.scale,
-        rotation: fore.rotation,
-        alpha: fore.alpha,
-        visible: fore.visible,
-        pivot: fore.pivot,
-        x: fore.x,
-        y: fore.y,
-        blendMode: fore.blendMode,
-      }
-
-      if (fore instanceof Sprite) {
-        const back = new Sprite({
-          ...data,
-          texture: fore.texture,
-        })
-
-        this.back.addChild(back)
-      }
-      else if (fore instanceof Text) {
-        const back = new Text({
-          ...data,
-          text: fore.text,
-          style: fore.style,
-        })
-
-        this.back.addChild(back)
-      }
+    const data = {
+      position: this.fore.position,
+      scale: this.fore.scale,
+      rotation: this.fore.rotation,
+      alpha: this.fore.alpha,
+      visible: this.fore.visible,
+      pivot: this.fore.pivot,
+      x: this.fore.x,
+      y: this.fore.y,
     }
+
+    Object.assign(this.back, data)
+
+    this.fore.children.forEach((child) => {
+      if (child instanceof Sprite) {
+        const newChild = new Sprite(child.texture)
+
+        const data = {
+          label: child.label,
+          position: child.position,
+          scale: child.scale,
+          rotation: child.rotation,
+          visible: child.visible,
+          pivot: child.pivot,
+          x: child.x,
+          y: child.y,
+          width: child.width,
+          height: child.height,
+        }
+
+        Object.assign(newChild, data)
+
+        this.back.addChild(newChild)
+      }
+    })
+  }
+
+  smoothstep(dt: number) {
+    const t = Math.min(Math.max(dt, 0), 1)
+    return t * t * (3 - 2 * t)
+  }
+
+  /**
+   * Check if the front and back layers have the same children.
+   */
+  foreAndBackAreSame() {
+    if (this.fore.children.length !== this.back.children.length)
+      return false
+
+    for (let i = 0; i < this.fore.children.length; i++) {
+      const foreChild = this.fore.children[i]
+      const backChild = this.back.children[i]
+
+      if (foreChild.label !== backChild.label)
+        return false
+    }
+
+    return true
   }
 }

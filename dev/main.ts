@@ -6,7 +6,7 @@ const engine = new KirikiriEngine({
   canvas,
   game: {
     entry: 'transparent-crossfade.ks',
-    root: 'http://127.0.0.1:5173',
+    root: 'http://localhost:1337',
     files: {
       'jump.ks': null,
       'image.ks': null,

@@ -14,6 +14,7 @@ import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { extractCommands } from '../utils/extractCommands'
+import { extractStorage } from '../utils/extractStorage'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
 import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
@@ -155,9 +156,36 @@ export class KirikiriEngine {
 
     this.currentData.script = removeFileExtension(filename)
 
+    await this.loadAssets(lines)
+
     await this.registerAllSubroutines(lines)
 
     return lines
+  }
+
+  private async loadAssets(lines: string[]) {
+    const filesToLoad = new Set<string>()
+
+    lines.forEach((line) => {
+      const storage = extractStorage(line)
+
+      if (storage) {
+        if (storage.endsWith('.ks')) {
+          return
+        }
+
+        try {
+          const path = this.getFullFilePath(storage)
+
+          filesToLoad.add(path)
+        }
+        catch {
+          this.logger.error(`Failed to load file: ${storage}`)
+        }
+      }
+    })
+
+    await this.renderer.loadAssets(Array.from(filesToLoad))
   }
 
   private async convertFilesToLines(response: Response) {

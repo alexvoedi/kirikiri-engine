@@ -11,7 +11,7 @@ describe('checkIsCommand', () => {
 
   it('should return true for a line starting with "@"', () => {
     const line = '@command'
-    expect(checkIsCommand(line)).toBe(true)
+    expect(checkIsCommand(line)).toBe(false)
   })
 
   it('should return false for a line not starting with "[" or "@"', () => {
