@@ -6,7 +6,7 @@ const schema = z.object({}).strict()
 /**
  * Implements the `ct` command.
  *
- * Resets the message layer. Everything is resettet to normal. Also, the message layer is removed.
+ * Removes all messages from the message layers and resets the message layer and page to default.
  */
 export async function clearTextCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)

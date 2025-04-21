@@ -7,6 +7,11 @@ const schema = z.object({
   canskip: z.string().transform(value => value === 'true').optional(),
 })
 
+/**
+ * Implements the `wt` command.
+ *
+ * Wait for the current transition to finish.
+ */
 export async function waitForTransitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 

@@ -6,6 +6,11 @@ import { GLOBALS } from '../constants'
 const schema = z.object({
 }).strict()
 
+/**
+ * Implements the `script` command.
+ *
+ * Executes a script in the context of the game engine.
+ */
 export async function scriptCommand(engine: KirikiriEngine, lines: string[], props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 

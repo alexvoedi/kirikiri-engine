@@ -7,6 +7,8 @@ const schema = z.object({
 }).strict()
 
 /**
+ * Implements the `call` command.
+ *
  * Calls a script file.
  */
 export async function callCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {

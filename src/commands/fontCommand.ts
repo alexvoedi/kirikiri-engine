@@ -12,6 +12,8 @@ const schema = z.object({
 
 /**
  * Implements the `font` command.
+ *
+ * Sets the font options for the text renderer.
  */
 export async function fontCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)

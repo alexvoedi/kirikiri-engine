@@ -7,6 +7,11 @@ const schema = z.object({
   enabled: z.string().transform(value => value === 'true').optional(),
 }).strict()
 
+/**
+ * Implements the `history` command.
+ *
+ * Sets options for the message history.
+ */
 export async function historyCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 

@@ -9,8 +9,10 @@ const schema = z.object({
 
 /**
  * Implements the `locate` command.
+ *
+ * Stores a position that can be used later.
  */
-export async function characterPositionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
+export async function storePositionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
   engine.renderer.setLocation(parsed.x, parsed.y)

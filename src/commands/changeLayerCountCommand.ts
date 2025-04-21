@@ -7,6 +7,11 @@ const schema = z.object({
   messages: createFloatSchema().optional(),
 }).strict()
 
+/**
+ * Implements the `laycount` command.
+ *
+ * Sets the number of layers.
+ */
 export async function changeLayerCountCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 

@@ -60,23 +60,23 @@
     "@nx/eslint": "20.8.0",
     "@types/lodash": "^4.17.16",
     "@types/node": "^22.14.1",
-    "@vitest/coverage-v8": "^3.1.1",
-    "@vitest/ui": "3.1.1",
+    "@vitest/coverage-v8": "^3.1.2",
+    "@vitest/ui": "3.1.2",
     "dotenv": "^16.5.0",
-    "eslint": "^9.25.0",
+    "eslint": "^9.25.1",
     "husky": "^9.1.7",
     "jsdom": "^26.1.0",
     "knip": "^5.50.5",
     "lint-staged": "^15.5.1",
     "nx": "20.8.0",
-    "tsdown": "^0.9.1",
+    "tsdown": "^0.9.2",
     "typescript": "^5.8.3",
     "vite": "^6.3.2",
-    "vitest": "^3.1.1",
+    "vitest": "^3.1.2",
     "zod": "^3.24.3"
   },
   "lint-staged": {
-    "*.{js,jsx,ts,tsx,vue,json,html}": "eslint --fix"
+    "*.{ts,json,html}": "eslint --fix"
   },
   "nx": {}
 }

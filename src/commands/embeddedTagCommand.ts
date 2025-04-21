@@ -6,7 +6,9 @@ const schema = z.object({
 }).strict()
 
 /**
- * Evaluates the expression and replaces the tag with the result.
+ * Implements the `emb` command.
+ *
+ * TODO
  */
 export async function embeddedTagCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)

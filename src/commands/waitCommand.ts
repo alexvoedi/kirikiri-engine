@@ -11,6 +11,8 @@ const schema = z.object({
 }).strict()
 
 /**
+ * Implements the `wait` command.
+ *
  * Waits for the specified amount of milliseconds.
  *
  * The difference between `normal` and `until` is that `normal` will wait in all cases for the specified amount of time, while `until` will for the remaining time since the last `resetwait` command.

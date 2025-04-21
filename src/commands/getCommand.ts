@@ -3,7 +3,6 @@ import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { buttonCommand } from './buttonCommand'
 import { callCommand } from './callCommand'
 import { changeLayerCountCommand } from './changeLayerCountCommand'
-import { characterPositionCommand } from './characterPositionCommand'
 import { clearMessageCommand } from './clearMessageCommand'
 import { clearTextCommand } from './clearTextCommand'
 import { clickSkipCommand } from './clickSkipCommand'
@@ -35,6 +34,7 @@ import { startanchorCommand } from './startanchorCommand'
 import { stopBackgroundMusicCommand } from './stopBackgroundMusicCommand'
 import { stopSoundEffectCommand } from './stopSoundEffectCommand'
 import { stopTransitionCommand } from './stopTransitionCommand'
+import { storePositionCommand } from './storePositionCommand'
 import { styleCommand } from './styleCommand'
 import { transitionCommand } from './transitionCommand'
 import { videoCommand } from './videoCommand'
@@ -72,7 +72,7 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   backlay: copyFrontToBackLayerCommand,
   resetwait: resetWaitCommand,
   emb: embeddedTagCommand,
-  locate: characterPositionCommand,
+  locate: storePositionCommand,
   laycount: changeLayerCountCommand,
   call: callCommand,
   loadplugin: loadPluginCommand,

@@ -10,6 +10,11 @@ const schema = z.object({
   index: createIntegerSchema(0).optional(),
 }).strict()
 
+/**
+ * Implements the `layopt` command.
+ *
+ * Sets options for a layer.
+ */
 export async function layerOptionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 

@@ -11,6 +11,11 @@ const schema = z.object({
   ]),
 }).strict()
 
+/**
+ * Implements the `delay` command.
+ *
+ * Sets the delay for the next character when outputting text.
+ */
 export async function delayCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 

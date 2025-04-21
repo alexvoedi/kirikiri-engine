@@ -15,6 +15,11 @@ const schema = z.object({
   children: createBooleanSchema().optional().default(true),
 }).strict()
 
+/**
+ * Implements the `trans` command.
+ *
+ * Moves all back layers to the front with a transition effect.
+ */
 export async function transitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 

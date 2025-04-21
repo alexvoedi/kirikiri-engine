@@ -13,5 +13,5 @@ const schema = z.object({
 export async function loadPluginCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  // we cannot load .dll files - we need to reimplement this
+  // we cannot load .dll files - we need to reimplement this with js
 }

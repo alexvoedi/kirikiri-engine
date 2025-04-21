@@ -7,6 +7,11 @@ const schema = z.object({
   lines: z.array(z.string()),
 }).strict()
 
+/**
+ * Implements the `if` command.
+ *
+ * Executes a block of code if the given condition is true.
+ */
 export async function ifCommand(engine: KirikiriEngine, props?: Record<string, unknown>): Promise<void> {
   const parsed = schema.parse(props)
 

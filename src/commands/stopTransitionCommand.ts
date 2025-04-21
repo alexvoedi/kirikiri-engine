@@ -6,6 +6,8 @@ const schema = z.object({}).strict()
 
 /**
  * Implements the `stoptrans` command.
+ *
+ * Stops a current transition immediately and goes to the final state.
  */
 export async function stopTransitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)

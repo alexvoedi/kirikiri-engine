@@ -2,3 +2,4 @@ onlyBuiltDependencies:
   - canvas
   - esbuild
   - nx
+  - rolldown

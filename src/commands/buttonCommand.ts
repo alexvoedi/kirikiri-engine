@@ -11,6 +11,11 @@ const schema = z.object({
   cond: z.string().optional(),
 }).strict()
 
+/**
+ * Implements the `button` command.
+ *
+ * Create a button on the screen that can be clicked to perform an action.
+ */
 export async function buttonCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
@@ -19,6 +24,9 @@ export async function buttonCommand(engine: KirikiriEngine, props?: Record<strin
       await jumpCommand(engine, {
         target: parsed.target,
       })
+    }
+    else {
+      throw new Error('No target specified for button command')
     }
   }
 

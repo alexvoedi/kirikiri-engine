@@ -9,6 +9,8 @@ const schema = z.object({
 
 /**
  * Implements the `fadeoutbgm` command.
+ *
+ * Fades out the background music over a specified time.
  */
 export async function fadeOutBackgroundMusicCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)

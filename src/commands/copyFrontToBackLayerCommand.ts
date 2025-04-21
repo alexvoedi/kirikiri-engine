@@ -7,6 +7,8 @@ const schema = z.object({
 
 /**
  * Implements the `backlay` command.
+ *
+ * Copies the front layer to the back layer.
  */
 export async function copyFrontToBackLayerCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)

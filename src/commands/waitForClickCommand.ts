@@ -5,9 +5,9 @@ import { EngineEvent } from '../constants'
 const schema = z.object({}).strict()
 
 /**
- * Implements the
+ * Implements the `waitclick` command.
  *
- * Waits for a click at the end of the current text line.
+ * Waits for a click.
  */
 export async function waitForClickCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)

@@ -21,6 +21,11 @@ const schema = z.union([
   }).strict(),
 ])
 
+/**
+ * Implements the `jump` command.
+ *
+ * Jumps to a subroutine or label in the current script or another script.
+ */
 export async function jumpCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 

@@ -14,6 +14,11 @@ const schema = z.object({
   lines: z.array(z.string()),
 })
 
+/**
+ * Implements the `macro` command.
+ *
+ * Defines a macro that can be called later.
+ */
 export function createMacro(engine: KirikiriEngine, props: Record<string, unknown>) {
   const parsed = schema.parse(props)
 

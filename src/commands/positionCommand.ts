@@ -15,6 +15,11 @@ const schema = z.object({
   opacity: createIntegerSchema(0, 255).transform(v => scaleRange(v, 0, 255, 0, 1)).optional(),
 }).strict()
 
+/**
+ * Implements the `position` command.
+ *
+ * Sets the position and other properties of a specified layer.
+ */
 export async function positionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
