@@ -43,7 +43,7 @@
     "test:ui": "vitest --ui",
     "prepare": "husky",
     "typecheck": "tsc --noEmit",
-    "knip": "knip",
+    "knip": "knip --cache",
     "knip:ci": "knip --production",
     "check": "nx run-many -t lint test typecheck convert knip",
     "check:watch": "pnpm check && nx watch --all -- pnpm check"

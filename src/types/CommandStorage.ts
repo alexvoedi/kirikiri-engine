@@ -46,4 +46,7 @@ export interface CommandStorage {
       data: LinkCommandProps
     }>
   }
+  indent?: {
+    enabled?: boolean
+  }
 }

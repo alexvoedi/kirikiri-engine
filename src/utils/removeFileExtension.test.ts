@@ -3,8 +3,8 @@ import { removeFileExtension } from './removeFileExtension'
 
 describe('removeFileExtension', () => {
   it('should remove the file extension from a string with a single dot', () => {
-    expect(removeFileExtension('file.txt')).toBe('file')
-    expect(removeFileExtension('document.pdf')).toBe('document')
+    expect(removeFileExtension('file.png')).toBe('file')
+    expect(removeFileExtension('script.ks')).toBe('script')
   })
 
   it('should return the same string if there is no file extension', () => {
@@ -13,13 +13,13 @@ describe('removeFileExtension', () => {
   })
 
   it('should handle strings with multiple dots correctly', () => {
-    expect(removeFileExtension('archive.tar.gz')).toBe('archive.tar')
-    expect(removeFileExtension('my.file.name.txt')).toBe('my.file.name')
+    expect(removeFileExtension('image.1.png')).toBe('image.1')
+    expect(removeFileExtension('my.file.name.ks')).toBe('my.file.name')
   })
 
   it('should handle strings with slashes and dots correctly', () => {
-    expect(removeFileExtension('/path/to/file.txt')).toBe('/path/to/file')
-    expect(removeFileExtension('C:\\path\\to\\file.txt')).toBe('C:\\path\\to\\file')
+    expect(removeFileExtension('/path/to/file.ks')).toBe('/path/to/file')
+    expect(removeFileExtension('C:\\path\\to\\file.ks')).toBe('C:\\path\\to\\file')
   })
 
   it('should return the same string if the last dot is before a slash', () => {
@@ -38,5 +38,9 @@ describe('removeFileExtension', () => {
 
   it('should only remove real file extensions', () => {
     expect(removeFileExtension('4-0025.3')).toBe('4-0025.3')
+  })
+
+  it('works with special character', () => {
+    expect(removeFileExtension('テスト.1.png')).toBe('テスト.1')
   })
 })

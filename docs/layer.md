@@ -5,7 +5,7 @@ Every layer has two pages: fore and back.
 The fore page is the currently displayed portion. This is what is visible to the user.
 The back page is the part that will be displayed when the transition is performed.
 
-A transition is a function that transfers th econtent drawn on the back page to the fore page
+A transition is a function that transfers the content drawn on the back page to the fore page
 
 Example:
 

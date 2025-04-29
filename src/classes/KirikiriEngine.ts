@@ -336,7 +336,8 @@ export class KirikiriEngine {
 
       const blockCommand = checkIsBlockCommand(command)
       if (blockCommand) {
-        return await this.processBlockCommand(command, index, lines, props)
+        const nextIndex = await this.processBlockCommand(command, index, lines, props)
+        return nextIndex
       }
 
       const basicCommand = getCommand(command)
@@ -431,13 +432,12 @@ export class KirikiriEngine {
    * Add a character to the visible text on the screen.
    */
   async addCharacter(character: string, options?: {
-    indent?: boolean
     skip?: boolean
   }) {
     const renderSpeed = 40
 
     return new Promise<void>((resolve) => {
-      this.renderer.addCharacterToText(character, options?.indent)
+      this.renderer.addCharacterToText(character, this.commandStorage.indent?.enabled)
 
       setTimeout(() => {
         resolve()
@@ -462,7 +462,6 @@ export class KirikiriEngine {
     }
 
     let index = 0
-    let indent = false
     while (index < text.length) {
       const character = text.charAt(index)
 
@@ -471,28 +470,37 @@ export class KirikiriEngine {
       if (commands.length) {
         for (const { command, props } of commands) {
           try {
-            if (command === 'indent') {
-              indent = true
-            }
-            else if (command === 'endindent') {
-              indent = false
-            }
-            else if (command === 'r') {
-              await this.addCharacter('\n', { indent, skip })
-            }
-            else {
-              const macro = this.macros[command]
-              if (macro) {
-                await macro(props)
+            switch (command) {
+              case 'indent': {
+                this.commandStorage.indent = {
+                  enabled: true,
+                }
+                break
               }
-              else {
-                const commandFunction = getCommand(command)
-
-                if (commandFunction) {
-                  await commandFunction(this, props)
+              case 'endindent': {
+                this.commandStorage.indent = {
+                  enabled: false,
+                }
+                break
+              }
+              case 'r': {
+                await this.addCharacter('\n', { skip })
+                break
+              }
+              default: {
+                const macro = this.macros[command]
+                if (macro) {
+                  await macro(props)
                 }
                 else {
-                  this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+                  const commandFunction = getCommand(command)
+
+                  if (commandFunction) {
+                    await commandFunction(this, props)
+                  }
+                  else {
+                    this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+                  }
                 }
               }
             }
@@ -507,7 +515,7 @@ export class KirikiriEngine {
         continue
       }
 
-      await this.addCharacter(character, { indent, skip })
+      await this.addCharacter(character, { skip })
 
       index += 1
     }

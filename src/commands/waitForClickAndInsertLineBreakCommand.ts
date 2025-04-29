@@ -6,13 +6,14 @@ const schema = z.object({}).strict()
 /**
  * Implements the `l` command.
  *
- * Waits for a click after showing text.
+ * Waits for a click and inserts a linebreak.
  */
-export async function waitForTextClickCommand(_: KirikiriEngine, props?: Record<string, string>): Promise<void> {
+export async function waitForClickAndInsertLineBreakCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
   return new Promise((resolve) => {
-    window.addEventListener('click', () => {
+    window.addEventListener('click', async () => {
+      await engine.addCharacter('\n')
       resolve()
     }, { once: true })
   })

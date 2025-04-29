@@ -29,6 +29,11 @@ describe('findFileInTree', () => {
     'videos': {
       'どれみ1015.mp4': null,
     },
+    'sound': {
+      '04. other': {
+        'a.sound.file.with.multiple.dots.ogg': null,
+      },
+    },
   }
 
   it('should find a file in the root path', () => {
@@ -62,7 +67,7 @@ describe('findFileInTree', () => {
   })
 
   it('can find with special characters', () => {
-    const result = findFileInTree('どれみ1015.mpg', mockTree)
+    const result = findFileInTree('どれみ1015.mp4', mockTree)
     expect(result).toEqual('videos/どれみ1015.mp4')
   })
 
@@ -72,5 +77,9 @@ describe('findFileInTree', () => {
     expect(findFileInTree('logo', mockTree)).toEqual('docs/images/logo')
     expect(findFileInTree('logo.png', mockTree)).toEqual('docs/images/logo.png')
     expect(findFileInTree('logo.ks', mockTree)).toEqual('docs/images/logo.ks')
+  })
+
+  it('find the file if it has multiple dots in its name', () => {
+    expect(findFileInTree('a.sound.file.with.multiple.dots.ogg', mockTree)).toEqual('sound/04. other/a.sound.file.with.multiple.dots.ogg')
   })
 })

@@ -40,10 +40,11 @@ import { transitionCommand } from './transitionCommand'
 import { videoCommand } from './videoCommand'
 import { waitCommand } from './waitCommand'
 import { waitForBackgroundMusicCommand } from './waitForBackgroundMusicCommand'
+import { waitForClickAndInsertLineBreakCommand } from './waitForClickAndInsertLineBreakCommand'
 import { waitForClickCommand } from './waitForClickCommand'
 import { waitForMoveCommand } from './waitForMoveCommand'
 import { waitForSoundEffectCommand } from './waitForSoundEffectCommand'
-import { waitForTextClickCommand } from './waitForTextClickCommand'
+import { waitForTextClickWithPageBreakCommand } from './waitForTextClickWithPageBreakCommand'
 import { waitForTransitionCommand } from './waitForTransitionCommand'
 
 const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void>> = {
@@ -57,7 +58,8 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   wait: waitCommand,
   playse: playSoundEffectCommand,
   ws: waitForSoundEffectCommand,
-  l: waitForTextClickCommand,
+  l: waitForClickAndInsertLineBreakCommand,
+  p: waitForTextClickWithPageBreakCommand,
   move: moveCommand,
   cm: clearMessageCommand,
   waitclick: waitForClickCommand,

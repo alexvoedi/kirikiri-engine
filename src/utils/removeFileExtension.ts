@@ -1,3 +1,5 @@
+import { VALID_FILE_EXTENSIONS } from '../constants'
+
 /**
  * Removes the file extension from a string if it has one.
  *
@@ -13,11 +15,11 @@ export function removeFileExtension(file: string) {
     return file
   }
 
-  // Ensure the part after the last dot is a valid file extension starting with a letter
+  // Ensure the part after the last dot is a valid file extension
   if (lastDotIndex > lastSlashIndex) {
-    const extension = file.slice(lastDotIndex + 1)
-    if (/^[a-z][a-z0-9]*$/i.test(extension)) {
-      return file.slice(0, lastDotIndex)
+    const extension = file.substring(lastDotIndex + 1).toLowerCase()
+    if (VALID_FILE_EXTENSIONS.includes(extension)) {
+      return file.substring(0, lastDotIndex)
     }
   }
 

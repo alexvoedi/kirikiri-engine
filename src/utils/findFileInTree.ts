@@ -1,4 +1,5 @@
 import type { FileTree } from 'src/types/FileTree'
+import { removeFileExtension } from './removeFileExtension'
 
 function search(file: string, tree: FileTree | null, path: string, results: string[]): void {
   if (tree === null) {
@@ -8,8 +9,8 @@ function search(file: string, tree: FileTree | null, path: string, results: stri
   for (const [key, value] of Object.entries(tree)) {
     const currentPath = path ? `${path}/${key}` : key
 
-    const keyWithoutExtension = key.includes('.') ? key.substring(0, key.lastIndexOf('.')) : key
-    const fileWithoutExtension = file.includes('.') ? file.substring(0, file.lastIndexOf('.')) : file
+    const keyWithoutExtension = removeFileExtension(key)
+    const fileWithoutExtension = removeFileExtension(file)
 
     if (keyWithoutExtension.toLowerCase() === fileWithoutExtension.toLowerCase()) {
       results.push(currentPath)
@@ -41,11 +42,11 @@ export function findFileInTree(
   }
 
   // Fallback to matches without considering the extension
-  const fileWithoutExtension = file.includes('.') ? file.substring(0, file.lastIndexOf('.')) : file
+  const fileWithoutExtension = removeFileExtension(file)
 
   const withoutExtension = foundFiles.find((f) => {
     const fileName = f.substring(f.lastIndexOf('/') + 1)
-    const fileNameWithoutExtension = fileName.includes('.') ? fileName.substring(0, fileName.lastIndexOf('.')) : fileName
+    const fileNameWithoutExtension = removeFileExtension(fileName)
     return fileNameWithoutExtension.toLowerCase() === fileWithoutExtension.toLowerCase()
   })
 

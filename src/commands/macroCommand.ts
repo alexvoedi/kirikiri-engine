@@ -11,7 +11,7 @@ import { scriptCommand } from './scriptCommand'
 
 const schema = z.object({
   name: z.string(),
-  lines: z.array(z.string()),
+  lines: z.array(z.string()), // TODO: remove from schema
 })
 
 /**

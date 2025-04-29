@@ -77,7 +77,6 @@ describe('engineEvent', () => {
     expect(EngineEvent.STOP_TRANSITION).toBe('stoptrans')
     expect(EngineEvent.FADEOUT_BGM).toBe('fadeoutbgm')
     expect(EngineEvent.TRANSITION_ENDED).toBe('wt')
-    expect(EngineEvent.TEXT_CLICK).toBe('text_click')
     expect(EngineEvent.CLICK).toBe('click')
     expect(EngineEvent.PAUSE_BGM).toBe('pausebgm')
     expect(EngineEvent.RESUME_BGM).toBe('resumebgm')

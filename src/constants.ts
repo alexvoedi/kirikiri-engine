@@ -64,9 +64,22 @@ export const EngineEvent = {
   STOP_TRANSITION: 'stoptrans',
   FADEOUT_BGM: 'fadeoutbgm',
   TRANSITION_ENDED: 'wt',
-  TEXT_CLICK: 'text_click',
   CLICK: 'click',
   PAUSE_BGM: 'pausebgm',
   RESUME_BGM: 'resumebgm',
   CHOICE: 'choice',
 }
+
+export const VALID_FILE_EXTENSIONS = [
+  'ogg',
+  'mp4',
+  'png',
+  'jpeg',
+  'jpg',
+  'gif',
+  'ks',
+  'md',
+  'tlg',
+  'mpg',
+  'wav',
+]
