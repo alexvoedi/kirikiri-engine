@@ -15,13 +15,12 @@ import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { extractCommands } from '../utils/extractCommands'
 import { extractStorage } from '../utils/extractStorage'
+import { extractSubroutines } from '../utils/extractSubroutines'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
-import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
-import { isComment } from '../utils/isComment'
+import { loadFileContent } from '../utils/loadFile'
 import { removeFileExtension } from '../utils/removeFileExtension'
-import { sanitizeLine } from '../utils/sanitizeLine'
-import { splitMultiCommandLine } from '../utils/splitMultiCommandLine'
+import { splitAndSanitize } from '../utils/splitAndSanitize'
 import { KirikiriRenderer } from './KirikiriRenderer'
 
 export class KirikiriEngine {
@@ -139,7 +138,7 @@ export class KirikiriEngine {
   async run() {
     await this.renderer.init()
 
-    await this.loadFile(this.game.entry)
+    await this.processFile(this.game.entry)
 
     this.state = EngineState.RUNNING
 
@@ -149,16 +148,16 @@ export class KirikiriEngine {
   /**
    * Load the file content with the correct encoding.
    */
-  async loadFile(filename: string): Promise<string[]> {
-    const response = await this.fetchFile(filename)
+  async processFile(filename: string): Promise<string[]> {
+    const content = await loadFileContent(filename, this.game.root, this.game.files)
 
-    const lines = await this.convertFilesToLines(response)
+    const lines = splitAndSanitize(content)
 
     this.currentData.script = removeFileExtension(filename)
 
     await this.loadAssets(lines)
 
-    await this.registerAllSubroutines(lines)
+    this.registerAllSubroutines(lines)
 
     return lines
   }
@@ -188,34 +187,6 @@ export class KirikiriEngine {
     await this.renderer.loadAssets(Array.from(filesToLoad))
   }
 
-  private async convertFilesToLines(response: Response) {
-    const arrayBuffer = await response.arrayBuffer()
-
-    const text = new TextDecoder('shift-jis').decode(arrayBuffer)
-
-    const lines = this.splitAndSanitize(text)
-
-    return lines
-  }
-
-  private async fetchFile(filename: string) {
-    const foundFile = findFileInTree(filename, this.game.files)
-
-    if (!foundFile) {
-      throw new Error(`File ${filename} not found`)
-    }
-
-    const url = new URL(foundFile, this.game.root.endsWith('/') ? this.game.root : `${this.game.root}/`)
-
-    const response = await fetch(url)
-
-    if (!response.ok) {
-      throw new Error(`Failed to load file: ${response.statusText}`)
-    }
-
-    return response
-  }
-
   getFullFilePath(filename: string) {
     const foundFile = findFileInTree(filename, this.game.files)
 
@@ -227,59 +198,16 @@ export class KirikiriEngine {
   }
 
   /**
-   * Split the content into lines and sanitize them. Removes all comments.
-   */
-  splitAndSanitize(content: string) {
-    return content
-      .split('\n')
-      .filter(Boolean)
-      .filter(line => !isComment(line))
-      .map(line => sanitizeLine(line))
-      .map(line => splitMultiCommandLine(line))
-      .flat()
-  }
-
-  /**
    * Scans the lines for subroutines and registers them.
    *
    * @param lines - The lines to scan.
    */
-  async registerAllSubroutines(lines: string[]) {
+  registerAllSubroutines(lines: string[]) {
     if (!this.currentData.script) {
       throw new Error(`No current script set`)
     }
 
-    this.subroutines[this.currentData.script] = {}
-
-    let index = 0
-
-    do {
-      const line = lines[index]
-
-      const firstCharacter = line.charAt(0)
-
-      if (firstCharacter === '*') {
-        const closingIndex = findSubroutineEndIndex(index, lines)
-
-        if (closingIndex === -1) {
-          throw new Error(`Could not find end of subroutine for ${line} at line ${index + 1}`)
-        }
-
-        const match = /^\*(.+)/.exec(line) // find the name of the subroutine
-
-        if (!match) {
-          throw new Error(`Invalid jump point line: ${line}`)
-        }
-
-        const subroutineName = match[1].trim()
-
-        const subroutineLines = lines.slice(index + 1, closingIndex)
-
-        this.subroutines[this.currentData.script][subroutineName] = subroutineLines
-      }
-
-      index += 1
-    } while (index < lines.length)
+    this.subroutines[this.currentData.script] = extractSubroutines(lines)
   }
 
   /**
@@ -544,8 +472,7 @@ export class KirikiriEngine {
     force?: boolean
   }) {
     if (options?.file) {
-      const lines = await this.loadFile(options.file)
-      await this.registerAllSubroutines(lines)
+      await this.processFile(options.file)
     }
 
     if (!this.currentData.script) {

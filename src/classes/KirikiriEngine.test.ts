@@ -11,7 +11,7 @@ describe('kirikiriEngine', () => {
   beforeEach(async () => {
     engine = await setupEngine()
 
-    vi.spyOn(engine, 'loadFile').mockImplementation(async (filename: string) => {
+    vi.spyOn(engine, 'processFile').mockImplementation(async (filename: string) => {
       if (filename === 'mock.ks') {
         return [
           '[wait time=100]',
@@ -32,7 +32,7 @@ describe('kirikiriEngine', () => {
   })
 
   it('should be able to load the file content with the correct encoding', async () => {
-    const lines = await engine.loadFile('mock.ks')
+    const lines = await engine.processFile('mock.ks')
 
     expect(lines).toBeDefined()
     expect(lines[0].startsWith('[wait time=100]')).toBe(true)
@@ -41,7 +41,7 @@ describe('kirikiriEngine', () => {
   })
 
   it('can process lines without throwing an error', async () => {
-    const lines = await engine.loadFile('mock.ks')
+    const lines = await engine.processFile('mock.ks')
 
     expect(() => engine.runLines(lines)).not.toThrow()
   })

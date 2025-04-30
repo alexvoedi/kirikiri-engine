@@ -21,7 +21,7 @@ export async function callCommand(engine: KirikiriEngine, props?: Record<string,
       throw new Error(`File ${parsed.storage} not found in game files`)
     }
 
-    await engine.loadFile(file)
+    await engine.processFile(file)
 
     if (parsed.target) {
       await engine.runSubroutine(parsed.target)

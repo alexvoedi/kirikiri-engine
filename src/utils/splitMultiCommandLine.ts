@@ -11,6 +11,12 @@ export function splitMultiCommandLine(line: string): string[] {
     return [line]
   }
 
+  const isSingleCommandLine = line.startsWith('@')
+
+  if (isSingleCommandLine) {
+    return [line]
+  }
+
   const regex = /(\[[^\]]+\])|([^[\]]+)/g
 
   const lines: string[] = []

@@ -83,14 +83,30 @@ describe('extractCommand', () => {
       },
     })
   })
-})
 
-it('should throw an error when the command line is empty', () => {
-  const line = '[]'
-  expect(() => extractCommand(line)).toThrowError()
-})
+  it('should throw an error when the command line is empty', () => {
+    const line = '[]'
+    expect(() => extractCommand(line)).toThrowError()
+  })
 
-it('should throw an error when the command line contains only spaces', () => {
-  const line = '[   ]'
-  expect(() => extractCommand(line)).toThrowError()
+  it('should throw an error when the command line contains only spaces', () => {
+    const line = '[   ]'
+    expect(() => extractCommand(line)).toThrowError()
+  })
+
+  it('should work with commands that start with @', () => {
+    const line = '@copy dx=0 dy=1 sx="2" sy="3" sw=4 sh=5'
+    const result = extractCommand(line)
+    expect(result).toEqual({
+      command: 'copy',
+      props: {
+        dx: '0',
+        dy: '1',
+        sx: '2',
+        sy: '3',
+        sw: '4',
+        sh: '5',
+      },
+    })
+  })
 })
