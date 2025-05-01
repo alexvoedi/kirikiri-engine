@@ -15,9 +15,11 @@ import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { extractCommands } from '../utils/extractCommands'
 import { extractStorage } from '../utils/extractStorage'
+import { extractSubroutineName } from '../utils/extractSubroutineName'
 import { extractSubroutines } from '../utils/extractSubroutines'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
+import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
 import { loadFileContent } from '../utils/loadFile'
 import { removeFileExtension } from '../utils/removeFileExtension'
 import { splitAndSanitize } from '../utils/splitAndSanitize'
@@ -140,8 +142,6 @@ export class KirikiriEngine {
 
     await this.processFile(this.game.entry)
 
-    this.state = EngineState.RUNNING
-
     await this.runSubroutine('start')
   }
 
@@ -155,22 +155,45 @@ export class KirikiriEngine {
 
     this.currentData.script = removeFileExtension(filename)
 
-    await this.loadAssets(lines)
-
     this.registerAllSubroutines(lines)
 
     return lines
   }
 
-  private async loadAssets(lines: string[]) {
+  private async loadSubroutineAssets() {
+    if (!this.currentData.script) {
+      throw new Error(`No current script set`)
+    }
+
+    if (!this.currentData.subroutine) {
+      throw new Error(`No current subroutine set`)
+    }
+
+    const subroutine = this.subroutines[this.currentData.script][this.currentData.subroutine]
+
     const filesToLoad = new Set<string>()
 
-    lines.forEach((line) => {
+    let index = 0
+    do {
+      const line = subroutine[index]
+
+      if (line.startsWith('*')) {
+        const subroutineEnd = findSubroutineEndIndex(index, subroutine)
+
+        if (subroutineEnd === -1) {
+          throw new Error(`Subroutine end not found`)
+        }
+
+        index = subroutineEnd
+      }
+
       const storage = extractStorage(line)
 
       if (storage) {
         if (storage.endsWith('.ks')) {
-          return
+          index += 1
+
+          continue
         }
 
         try {
@@ -182,9 +205,13 @@ export class KirikiriEngine {
           this.logger.error(`Failed to load file: ${storage}`)
         }
       }
-    })
 
-    await this.renderer.loadAssets(Array.from(filesToLoad))
+      index += 1
+    } while (index < subroutine.length)
+
+    if (filesToLoad.size > 0) {
+      await this.renderer.loadAssets(Array.from(filesToLoad))
+    }
   }
 
   getFullFilePath(filename: string) {
@@ -229,17 +256,23 @@ export class KirikiriEngine {
     this.currentData.line = line
 
     switch (firstCharacter) {
-      case '*':
-        return index + 1
+      case '*': {
+        const subroutineName = extractSubroutineName(line)
+        const subroutineEndIndex = findSubroutineEndIndex(index, lines)
 
+        await this.runSubroutine(subroutineName)
+
+        return subroutineEndIndex
+      }
       case '@':
-      case '[':
+      case '[': {
         this.logger.debug(`Processing line ${index + 1}: ${line}`)
         return await this.processCommand(line, index, lines)
-
-      default:
+      }
+      default: {
         await this.processText(line)
         return index + 1
+      }
     }
   }
 
@@ -327,9 +360,7 @@ export class KirikiriEngine {
     do {
       await this.handlePausedState()
 
-      if (this.state === EngineState.CANCEL_SUBROUTINE) {
-        this.state = EngineState.RUNNING
-        window.dispatchEvent(new CustomEvent(EngineEvent.SUBROUTINE_CANCELLED))
+      if (this.state === EngineState.STOPPED) {
         return
       }
 
@@ -495,6 +526,8 @@ export class KirikiriEngine {
     this.currentData.subroutine = subroutineName
     this.subroutineCallStack.push(subroutineName)
     this.logger.debug(`Running subroutine ${subroutineName}. Callstack: ${this.subroutineCallStack.join(' > ')}`)
+    await this.loadSubroutineAssets()
+    this.setState(EngineState.RUNNING)
     await this.runLines(subroutine)
     this.subroutineCallStack.pop()
     this.currentData.subroutine = this.subroutineCallStack[this.subroutineCallStack.length - 1] || null

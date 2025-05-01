@@ -97,11 +97,14 @@ export class KirikiriRenderer {
     this.app.stage.addChild(this.message1)
   }
 
-  async loadAssets(files: string[], batchSize: number = 10) {
-    for (let i = 0; i < files.length; i += batchSize) {
-      const batch = files.slice(i, i + batchSize)
-      await Assets.load(batch)
-    }
+  async loadAssets(files: string[]): Promise<void> {
+    return new Promise((resolve) => {
+      Assets.load(files, (progress) => {
+        if (progress >= 0.2) {
+          resolve()
+        }
+      })
+    })
   }
 
   /**

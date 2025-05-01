@@ -1,3 +1,4 @@
+import { extractSubroutineName } from './extractSubroutineName'
 import { findSubroutineEndIndex } from './findSubroutineEndIndex'
 
 export function extractSubroutines(lines: string[]) {
@@ -21,13 +22,7 @@ export function extractSubroutines(lines: string[]) {
       throw new Error(`Could not find end of subroutine for ${line} at line ${index + 1}`)
     }
 
-    const match = /^\*(.+)/.exec(line) // find the name of the subroutine
-
-    if (!match) {
-      throw new Error(`Invalid jump point line: ${line}`)
-    }
-
-    const subroutineName = match[1].trim()
+    const subroutineName = extractSubroutineName(line)
 
     const subroutineLines = lines.slice(index + 1, closingIndex)
 

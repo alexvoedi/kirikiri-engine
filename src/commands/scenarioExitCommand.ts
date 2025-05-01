@@ -12,5 +12,5 @@ const schema = z.object({}).strict()
 export async function scenarioExitCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  engine.setState(EngineState.CANCEL_SUBROUTINE)
+  engine.setState(EngineState.STOPPED)
 }
