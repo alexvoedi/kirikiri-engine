@@ -23,7 +23,7 @@ const schema = z.union([
 /**
  * Implements the `jump` command.
  *
- * Jumps to a label.
+ * Jumps to a label. Will replace the current callstack.
  */
 export async function jumpCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
@@ -31,16 +31,20 @@ export async function jumpCommand(engine: KirikiriEngine, props?: Record<string,
   if ('storage' in parsed && 'target' in parsed) {
     const label = parsed.target.replace(/^\*/, '')
 
-    await engine.loadFile(parsed.storage, label)
+    const result = await engine.loadFile(parsed.storage, label)
+
+    engine.callstack.replace(result)
   }
 
   if ('storage' in parsed) {
-    return
+    const result = await engine.loadFile(parsed.storage)
+
+    engine.callstack.replace(result)
   }
 
   if ('target' in parsed) {
     const label = parsed.target.replace(/^\*/, '')
 
-    engine.callstack[engine.callstack.length - 1].index = engine.labels[engine.callstack[engine.callstack.length - 1].file][label]
+    engine.callstack.current.index = engine.labels[engine.callstack.current.file][label]
   }
 }

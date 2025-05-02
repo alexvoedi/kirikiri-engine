@@ -11,6 +11,8 @@ describe('extractCommand', () => {
         key1: 'value1',
         key2: 'value2.jpg',
       },
+      from: 0,
+      to: 38,
     })
   })
 
@@ -20,6 +22,8 @@ describe('extractCommand', () => {
     expect(result).toEqual({
       command: 'command',
       props: {},
+      from: 2,
+      to: 14,
     })
   })
 
@@ -36,6 +40,8 @@ describe('extractCommand', () => {
       props: {
         key1: 'value1',
       },
+      from: 0,
+      to: 26,
     })
   })
 
@@ -48,6 +54,8 @@ describe('extractCommand', () => {
         key1: 'value1',
         key2: 'value2',
       },
+      from: 0,
+      to: 42,
     })
   })
 
@@ -59,6 +67,8 @@ describe('extractCommand', () => {
       props: {
         exp: 'sf.waitCnt==100',
       },
+      from: 0,
+      to: 25,
     })
   })
 
@@ -70,6 +80,8 @@ describe('extractCommand', () => {
       props: {
         exp: 'sf.waitCnt==50 || sf.waitCnt==10',
       },
+      from: 0,
+      to: 42,
     })
   })
 
@@ -81,6 +93,8 @@ describe('extractCommand', () => {
       props: {
         storage: 'どれみ1015.mpg',
       },
+      from: 0,
+      to: 32,
     })
   })
 
@@ -89,7 +103,7 @@ describe('extractCommand', () => {
     expect(() => extractCommand(line)).toThrowError()
   })
 
-  it('should throw an error when the command line contains only spaces', () => {
+  it('should throw an error when the command is empty', () => {
     const line = '[   ]'
     expect(() => extractCommand(line)).toThrowError()
   })
@@ -107,6 +121,31 @@ describe('extractCommand', () => {
         sw: '4',
         sh: '5',
       },
+      from: 0,
+      to: 39,
+    })
+  })
+
+  it('should extract the command at the given index', () => {
+    const line = '[command key1=value1 key2="value2.jpg"][command2 key3=value3]'
+    const result1 = extractCommand(line)
+    const result2 = extractCommand(line, 39)
+    expect(result1).toEqual({
+      command: 'command',
+      props: {
+        key1: 'value1',
+        key2: 'value2.jpg',
+      },
+      from: 0,
+      to: 38,
+    })
+    expect(result2).toEqual({
+      command: 'command2',
+      props: {
+        key3: 'value3',
+      },
+      from: 39,
+      to: 60,
     })
   })
 })

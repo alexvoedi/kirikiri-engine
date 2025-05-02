@@ -13,13 +13,13 @@ import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
-import { extractCommands } from '../utils/extractCommands'
 import { extractLabel } from '../utils/extractLabel'
 import { extractStorage } from '../utils/extractStorage'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
 import { loadFileContent } from '../utils/loadFile'
 import { removeFileExtension } from '../utils/removeFileExtension'
+import { Callstack } from './Callstack'
 import { KirikiriRenderer } from './KirikiriRenderer'
 
 export class KirikiriEngine {
@@ -56,11 +56,7 @@ export class KirikiriEngine {
   /**
    * Subroutine call stack
    */
-  readonly callstack: Array<{
-    file: string
-    lines: string[]
-    index: number
-  }> = []
+  readonly callstack: Callstack
 
   /**
    * Structure to store labels.
@@ -107,6 +103,7 @@ export class KirikiriEngine {
     }
 
     this.renderer = new KirikiriRenderer(canvas)
+    this.callstack = new Callstack()
 
     this.logger = createConsola({
       fancy: true,
@@ -127,6 +124,9 @@ export class KirikiriEngine {
     this.state = EngineState.INITIALIZED
   }
 
+  /**
+   * Start the execution of the engine.
+   */
   async start() {
     if (this.state !== EngineState.INITIALIZED) {
       throw new Error('Engine is not initialized')
@@ -134,13 +134,15 @@ export class KirikiriEngine {
 
     this.state = EngineState.RUNNING
 
-    await this.loadFile(this.game.entry)
+    const result = await this.loadFile(this.game.entry)
+
+    this.callstack.push(result)
 
     await this.run()
   }
 
   /**
-   * Start the engine at the specified entry point.
+   * Load the file and register its labels.
    */
   async loadFile(filename: string, label?: string) {
     const lines = await this.loadFileContent(filename)
@@ -152,11 +154,11 @@ export class KirikiriEngine {
 
     const index = label ? this.labels[file][label] : 0
 
-    this.callstack.push({
+    return {
       file,
       lines,
       index,
-    })
+    }
   }
 
   async loadAssets(lines: string[]) {
@@ -212,10 +214,6 @@ export class KirikiriEngine {
     this.labels[file] = labels
   }
 
-  get currentSubroutine() {
-    return this.callstack[this.callstack.length - 1]
-  }
-
   /**
    * Load the file content with the correct encoding.
    */
@@ -239,21 +237,35 @@ export class KirikiriEngine {
   }
 
   /**
-   * Handles the paused state of the engine.
-   *
-   * If the engine is paused, it will wait for the CONTINUE event to be dispatched.
-   * This allows the engine to pause execution and wait for user input or other events.
+   * Run the engine from the specified file and index in the callstack.
    */
-  private async handlePausedState(): Promise<void> {
-    if (this.state === EngineState.PAUSED) {
-      await new Promise<void>((resolve) => {
-        window.addEventListener(EngineEvent.CONTINUE, () => resolve())
-      })
-    }
+  async run(): Promise<void> {
+    do {
+      if (this.state === EngineState.PAUSED) {
+        await new Promise<void>((resolve) => {
+          window.addEventListener(EngineEvent.CONTINUE, () => resolve())
+        })
+      }
+
+      if (this.state === EngineState.STOPPED) {
+        return
+      }
+
+      try {
+        await this.processCurrentLine()
+      }
+      catch (error) {
+        const line = this.callstack.currentLine
+
+        this.logger.error(`Error processing line ${this.callstack.current.index + 1}: ${line}`, error)
+
+        this.callstack.current.index += 1
+      }
+    } while (this.callstack.current.index < this.callstack.current.lines.length)
   }
 
   private async processCurrentLine(): Promise<void> {
-    const line = this.currentSubroutine.lines[this.currentSubroutine.index]
+    const line = this.callstack.currentLine
 
     let column = 0
     do {
@@ -273,47 +285,56 @@ export class KirikiriEngine {
         case '\\':
         case ';':
         case '*': {
-          this.currentSubroutine.index += 1
+          this.callstack.current.index += 1
+
           return
         }
+
         case '@': {
-          this.logger.debug(`Processing line ${this.currentSubroutine.index + 1}: ${line}`)
           const { command, props } = extractCommand(line)
-          await this.processCommand(command, props)
-          this.currentSubroutine.index += 1
+          await this.execCommand(command, props)
+
+          this.callstack.current.index += 1
+
           return
         }
+
         case '[': {
-          this.logger.debug(`Processing line ${this.currentSubroutine.index + 1}: ${line}`)
           const closingIndex = line.indexOf(']', column)
 
           if (closingIndex === -1) {
-            throw new Error(`Unmatched [ at line ${this.currentSubroutine.index + 1}`)
+            throw new Error(`Unmatched [ at line ${this.callstack.current.index + 1}`)
           }
 
           const text = line.slice(column, closingIndex + 1)
           const { command, props } = extractCommand(text)
 
-          await this.processCommand(command, props)
+          await this.execCommand(command, props)
 
           column = closingIndex + 1
+
           break
         }
+
         default: {
           await this.processText()
-          this.currentSubroutine.index += 1
+
+          this.callstack.current.index += 1
+
           return
         }
       }
     } while (column < line.length)
 
-    this.currentSubroutine.index += 1
+    this.callstack.current.index += 1
   }
 
   /**
-   * Processes a line that contains commands.
+   * Executes the given command with the provided properties.
    */
-  private async processCommand(command: string, props: Record<string, string>): Promise<void> {
+  private async execCommand(command: string, props: Record<string, string>): Promise<void> {
+    this.logger.debug(`Processing line ${this.callstack.current.index + 1}: ${this.callstack.currentLine}`)
+
     try {
       const macro = this.macros[command]
       if (macro) {
@@ -332,10 +353,10 @@ export class KirikiriEngine {
     }
     catch (error) {
       if (error instanceof UnknownCommandError) {
-        this.logger.warn(`Unknown command: ${command} at line ${this.currentSubroutine.index + 1}`)
+        this.logger.warn(`Unknown command: ${command} at line ${this.callstack.current.index + 1}`)
       }
       else {
-        this.logger.error(`Error processing command: ${command} at line ${this.currentSubroutine.index + 1}`, error)
+        this.logger.error(`Error processing command: ${command} at line ${this.callstack.current.index + 1}`, error)
       }
     }
   }
@@ -347,24 +368,24 @@ export class KirikiriEngine {
    * @param props - The properties of the command.
    */
   private async processBlockCommand(command: string, props: Record<string, string>): Promise<void> {
-    const closingIndex = findClosingBlockCommandIndex(command, this.currentSubroutine.index, this.currentSubroutine.lines)
+    const closingIndex = findClosingBlockCommandIndex(command, this.callstack.current.index, this.callstack.current.lines)
 
-    const blockLines = this.currentSubroutine.lines.slice(this.currentSubroutine.index + 1, closingIndex)
+    const blockLines = this.callstack.current.lines.slice(this.callstack.current.index + 1, closingIndex)
 
     switch (command) {
       case 'macro': {
         const { macro, name } = createMacro(this, blockLines, props)
         this.macros[name] = macro
-        this.currentSubroutine.index = closingIndex
+        this.callstack.current.index = closingIndex
         break
       }
       case 'iscript':
         await scriptCommand(this, blockLines, props)
-        this.currentSubroutine.index = closingIndex
+        this.callstack.current.index = closingIndex
         break
       case 'link': {
         await linkCommand(this, blockLines, props)
-        this.currentSubroutine.index = closingIndex
+        this.callstack.current.index = closingIndex
         break
       }
       case 'if': {
@@ -372,28 +393,6 @@ export class KirikiriEngine {
         break
       }
     }
-  }
-
-  /**
-   *
-   */
-  async run(): Promise<void> {
-    do {
-      await this.handlePausedState()
-
-      if (this.state === EngineState.STOPPED) {
-        return
-      }
-
-      try {
-        await this.processCurrentLine()
-      }
-      catch (error) {
-        const line = this.currentSubroutine.lines[this.currentSubroutine.index]
-        this.logger.error(`Error processing line ${this.currentSubroutine.index + 1}: ${line}`, error)
-        this.currentSubroutine.index += 1
-      }
-    } while (this.currentSubroutine.index < this.currentSubroutine.lines.length)
   }
 
   /**
@@ -417,7 +416,7 @@ export class KirikiriEngine {
    * Process text.
    */
   async processText() {
-    const text = this.currentSubroutine.lines[this.currentSubroutine.index]
+    const text = this.callstack.currentLine
 
     let skip = false
 
@@ -435,59 +434,57 @@ export class KirikiriEngine {
     while (index < text.length) {
       const character = text.charAt(index)
 
-      const { length, commands } = extractCommands(text.slice(index))
+      if (character !== '[') {
+        await this.addCharacter(character, { skip })
 
-      if (commands.length) {
-        for (const { command, props } of commands) {
-          try {
-            switch (command) {
-              case 'indent': {
-                this.commandStorage.indent = {
-                  enabled: true,
-                }
-                break
-              }
-              case 'endindent': {
-                this.commandStorage.indent = {
-                  enabled: false,
-                }
-                break
-              }
-              case 'r': {
-                await this.addCharacter('\n', { skip })
-                break
-              }
-              default: {
-                const macro = this.macros[command]
-                if (macro) {
-                  await macro(props)
-                }
-                else {
-                  const commandFunction = getCommand(command)
-
-                  if (commandFunction) {
-                    await commandFunction(this, props)
-                  }
-                  else {
-                    this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
-                  }
-                }
-              }
-            }
-          }
-          catch (error) {
-            this.logger.error(error)
-          }
-        }
-
-        index += length
+        index += 1
 
         continue
       }
 
-      await this.addCharacter(character, { skip })
+      const { command, props, to } = extractCommand(text, index)
 
-      index += 1
+      try {
+        switch (command) {
+          case 'indent': {
+            this.commandStorage.indent = {
+              enabled: true,
+            }
+            break
+          }
+          case 'endindent': {
+            this.commandStorage.indent = {
+              enabled: false,
+            }
+            break
+          }
+          case 'r': {
+            await this.addCharacter('\n', { skip })
+            break
+          }
+          default: {
+            const macro = this.macros[command]
+            if (macro) {
+              await macro(props)
+            }
+            else {
+              const commandFunction = getCommand(command)
+
+              if (commandFunction) {
+                await commandFunction(this, props)
+              }
+              else {
+                this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+              }
+            }
+          }
+        }
+      }
+      catch (error) {
+        this.logger.error(error)
+      }
+
+      index = to + 1
     }
 
     if (this.commandStorage.clickskip?.enabled) {

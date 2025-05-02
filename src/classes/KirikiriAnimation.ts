@@ -11,8 +11,6 @@ export class KirikiriAnimation {
    */
   readonly subroutines: Record<string, string[]> = {}
 
-  private loop: boolean = false
-
   constructor({
     lines,
   }: {
