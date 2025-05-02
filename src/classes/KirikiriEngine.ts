@@ -14,15 +14,12 @@ import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { extractCommands } from '../utils/extractCommands'
+import { extractLabel } from '../utils/extractLabel'
 import { extractStorage } from '../utils/extractStorage'
-import { extractSubroutineName } from '../utils/extractSubroutineName'
-import { extractSubroutines } from '../utils/extractSubroutines'
 import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
-import { findSubroutineEndIndex } from '../utils/findSubroutineEndIndex'
 import { loadFileContent } from '../utils/loadFile'
 import { removeFileExtension } from '../utils/removeFileExtension'
-import { splitAndSanitize } from '../utils/splitAndSanitize'
 import { KirikiriRenderer } from './KirikiriRenderer'
 
 export class KirikiriEngine {
@@ -52,37 +49,23 @@ export class KirikiriEngine {
   readonly logger: ConsolaInstance
 
   /**
-   * Counts how often a command was called.
-   */
-  readonly commandCallCount: Record<string, number> = {}
-
-  /**
    * All available macros.
    */
   readonly macros: Record<string, (props: Record<string, string>) => Promise<void>> = {}
 
   /**
-   * All available subroutines grouped by script.
-   */
-  readonly subroutines: Record<string, Record<string, string[]>> = {}
-
-  /**
-   * Current script
-   */
-  currentData: {
-    script: string | null
-    subroutine: string | null
-    line: string | null
-  } = {
-      script: null,
-      subroutine: null,
-      line: null,
-    }
-
-  /**
    * Subroutine call stack
    */
-  readonly subroutineCallStack: string[] = []
+  readonly callstack: Array<{
+    file: string
+    lines: string[]
+    index: number
+  }> = []
+
+  /**
+   * Structure to store labels.
+   */
+  readonly labels: Record<string, Record<string, number>> = {}
 
   /**
    * State
@@ -133,59 +116,55 @@ export class KirikiriEngine {
         date: true,
       },
     })
+  }
+
+  /**
+   * Initialize the engine.
+   */
+  async init() {
+    await this.renderer.init()
 
     this.state = EngineState.INITIALIZED
   }
 
-  async run() {
-    await this.renderer.init()
+  async start() {
+    if (this.state !== EngineState.INITIALIZED) {
+      throw new Error('Engine is not initialized')
+    }
 
-    await this.processFile(this.game.entry)
+    this.state = EngineState.RUNNING
 
-    await this.runSubroutine('start')
+    await this.loadFile(this.game.entry)
+
+    await this.run()
   }
 
   /**
-   * Load the file content with the correct encoding.
+   * Start the engine at the specified entry point.
    */
-  async processFile(filename: string): Promise<string[]> {
-    const content = await loadFileContent(filename, this.game.root, this.game.files)
+  async loadFile(filename: string, label?: string) {
+    const lines = await this.loadFileContent(filename)
 
-    const lines = splitAndSanitize(content)
+    const file = removeFileExtension(filename)
 
-    this.currentData.script = removeFileExtension(filename)
+    await this.registerLabels(file, lines)
+    await this.loadAssets(lines)
 
-    this.registerAllSubroutines(lines)
+    const index = label ? this.labels[file][label] : 0
 
-    return lines
+    this.callstack.push({
+      file,
+      lines,
+      index,
+    })
   }
 
-  private async loadSubroutineAssets() {
-    if (!this.currentData.script) {
-      throw new Error(`No current script set`)
-    }
-
-    if (!this.currentData.subroutine) {
-      throw new Error(`No current subroutine set`)
-    }
-
-    const subroutine = this.subroutines[this.currentData.script][this.currentData.subroutine]
-
+  async loadAssets(lines: string[]) {
     const filesToLoad = new Set<string>()
 
     let index = 0
     do {
-      const line = subroutine[index]
-
-      if (line.startsWith('*')) {
-        const subroutineEnd = findSubroutineEndIndex(index, subroutine)
-
-        if (subroutineEnd === -1) {
-          throw new Error(`Subroutine end not found`)
-        }
-
-        index = subroutineEnd
-      }
+      const line = lines[index]
 
       const storage = extractStorage(line)
 
@@ -207,13 +186,48 @@ export class KirikiriEngine {
       }
 
       index += 1
-    } while (index < subroutine.length)
+    } while (index < lines.length)
 
     if (filesToLoad.size > 0) {
       await this.renderer.loadAssets(Array.from(filesToLoad))
     }
   }
 
+  /**
+   * Find all labels in a file and register them.
+   */
+  async registerLabels(file: string, lines: string[]) {
+    const labels: Record<string, number> = {}
+
+    for (let index = 0; index < lines.length; index++) {
+      const line = lines[index]
+
+      if (line.startsWith('*')) {
+        const label = extractLabel(line)
+
+        labels[label] = index
+      }
+    }
+
+    this.labels[file] = labels
+  }
+
+  get currentSubroutine() {
+    return this.callstack[this.callstack.length - 1]
+  }
+
+  /**
+   * Load the file content with the correct encoding.
+   */
+  async loadFileContent(filename: string): Promise<string[]> {
+    const content = await loadFileContent(filename, this.game.root, this.game.files)
+
+    return content.split('\n')
+  }
+
+  /**
+   * Given a filename, get the full path to the file.
+   */
   getFullFilePath(filename: string) {
     const foundFile = findFileInTree(filename, this.game.files)
 
@@ -222,19 +236,6 @@ export class KirikiriEngine {
     }
 
     return `${this.game.root}/${foundFile}`
-  }
-
-  /**
-   * Scans the lines for subroutines and registers them.
-   *
-   * @param lines - The lines to scan.
-   */
-  registerAllSubroutines(lines: string[]) {
-    if (!this.currentData.script) {
-      throw new Error(`No current script set`)
-    }
-
-    this.subroutines[this.currentData.script] = extractSubroutines(lines)
   }
 
   /**
@@ -251,69 +252,91 @@ export class KirikiriEngine {
     }
   }
 
-  private async processLine(line: string, index: number, lines: string[]): Promise<number> {
-    const firstCharacter = line.charAt(0)
-    this.currentData.line = line
+  private async processCurrentLine(): Promise<void> {
+    const line = this.currentSubroutine.lines[this.currentSubroutine.index]
 
-    switch (firstCharacter) {
-      case '*': {
-        const subroutineName = extractSubroutineName(line)
-        const subroutineEndIndex = findSubroutineEndIndex(index, lines)
+    let column = 0
+    do {
+      const character = line.charAt(column)
 
-        await this.runSubroutine(subroutineName)
+      if (
+        character === ' '
+        || character === '\t'
+        || character === '\r'
+        || character === '\n'
+      ) {
+        column += 1
+        continue
+      }
 
-        return subroutineEndIndex
+      switch (character) {
+        case '\\':
+        case ';':
+        case '*': {
+          this.currentSubroutine.index += 1
+          return
+        }
+        case '@': {
+          this.logger.debug(`Processing line ${this.currentSubroutine.index + 1}: ${line}`)
+          const { command, props } = extractCommand(line)
+          await this.processCommand(command, props)
+          this.currentSubroutine.index += 1
+          return
+        }
+        case '[': {
+          this.logger.debug(`Processing line ${this.currentSubroutine.index + 1}: ${line}`)
+          const closingIndex = line.indexOf(']', column)
+
+          if (closingIndex === -1) {
+            throw new Error(`Unmatched [ at line ${this.currentSubroutine.index + 1}`)
+          }
+
+          const text = line.slice(column, closingIndex + 1)
+          const { command, props } = extractCommand(text)
+
+          await this.processCommand(command, props)
+
+          column = closingIndex + 1
+          break
+        }
+        default: {
+          await this.processText()
+          this.currentSubroutine.index += 1
+          return
+        }
       }
-      case '@':
-      case '[': {
-        this.logger.debug(`Processing line ${index + 1}: ${line}`)
-        return await this.processCommand(line, index, lines)
-      }
-      default: {
-        await this.processText(line)
-        return index + 1
-      }
-    }
+    } while (column < line.length)
+
+    this.currentSubroutine.index += 1
   }
 
   /**
-   * Processes a command line.
-   *
-   * @param line - The command line to process.
-   * @param index - The current line index.
-   * @param lines - The list of all lines.
+   * Processes a line that contains commands.
    */
-  private async processCommand(line: string, index: number, lines: string[]): Promise<number> {
-    const { command, props } = extractCommand(line)
-
-    this.updateCommandCallCount(command)
-
+  private async processCommand(command: string, props: Record<string, string>): Promise<void> {
     try {
       const macro = this.macros[command]
       if (macro) {
         await macro(props)
-        return index + 1
+        return
       }
 
       const blockCommand = checkIsBlockCommand(command)
       if (blockCommand) {
-        const nextIndex = await this.processBlockCommand(command, index, lines, props)
-        return nextIndex
+        await this.processBlockCommand(command, props)
+        return
       }
 
       const basicCommand = getCommand(command)
       await basicCommand(this, props)
-      return index + 1
     }
     catch (error) {
       if (error instanceof UnknownCommandError) {
-        this.logger.warn(`Unknown command: ${command} at line ${index + 1}`)
+        this.logger.warn(`Unknown command: ${command} at line ${this.currentSubroutine.index + 1}`)
       }
       else {
-        this.logger.error(`Error processing command: ${command} at line ${index + 1}`, error)
+        this.logger.error(`Error processing command: ${command} at line ${this.currentSubroutine.index + 1}`, error)
       }
-
-      return index + 1
     }
   }
 
@@ -321,42 +344,40 @@ export class KirikiriEngine {
    * Processes a block command.
    *
    * @param command - The block command to process.
-   * @param index - The current line index.
-   * @param lines - The list of all lines.
    * @param props - The properties of the command.
    */
-  private async processBlockCommand(command: string, index: number, lines: string[], props: Record<string, string>): Promise<number> {
-    const closingIndex = findClosingBlockCommandIndex(command, index, lines)
+  private async processBlockCommand(command: string, props: Record<string, string>): Promise<void> {
+    const closingIndex = findClosingBlockCommandIndex(command, this.currentSubroutine.index, this.currentSubroutine.lines)
 
-    const blockLines = lines.slice(index + 1, closingIndex)
+    const blockLines = this.currentSubroutine.lines.slice(this.currentSubroutine.index + 1, closingIndex)
 
     switch (command) {
       case 'macro': {
-        const { macro, name } = createMacro(this, { ...props, lines: blockLines })
+        const { macro, name } = createMacro(this, blockLines, props)
         this.macros[name] = macro
+        this.currentSubroutine.index = closingIndex
         break
       }
       case 'iscript':
         await scriptCommand(this, blockLines, props)
+        this.currentSubroutine.index = closingIndex
         break
       case 'link': {
         await linkCommand(this, blockLines, props)
+        this.currentSubroutine.index = closingIndex
         break
       }
-      case 'if':
-        await ifCommand(this, { ...props, lines: blockLines })
+      case 'if': {
+        await ifCommand(this, blockLines, props)
         break
+      }
     }
-
-    return closingIndex + 1
   }
 
   /**
-   * Runs the specified lines of code.
+   *
    */
-  async runLines(lines: string[]): Promise<void> {
-    let index = 0
-
+  async run(): Promise<void> {
     do {
       await this.handlePausedState()
 
@@ -364,27 +385,15 @@ export class KirikiriEngine {
         return
       }
 
-      if (this.state === EngineState.CANCEL_ALL_SUBROUTINES) {
-        if (this.subroutineCallStack.length === 1) {
-          this.state = EngineState.RUNNING
-          window.dispatchEvent(new CustomEvent(EngineEvent.ALL_SUBROUTINES_CANCELLED))
-        }
-        else {
-          this.logger.info(`Cancelled subroutine ${this.subroutineCallStack[this.subroutineCallStack.length - 1]}`)
-        }
-        return
-      }
-
-      const line = lines[index]
-
       try {
-        index = await this.processLine(line, index, lines)
+        await this.processCurrentLine()
       }
       catch (error) {
-        this.logger.error(`Error processing line ${index + 1}: ${line}`, error)
-        index += 1
+        const line = this.currentSubroutine.lines[this.currentSubroutine.index]
+        this.logger.error(`Error processing line ${this.currentSubroutine.index + 1}: ${line}`, error)
+        this.currentSubroutine.index += 1
       }
-    } while (index < lines.length)
+    } while (this.currentSubroutine.index < this.currentSubroutine.lines.length)
   }
 
   /**
@@ -407,7 +416,9 @@ export class KirikiriEngine {
   /**
    * Process text.
    */
-  async processText(text: string) {
+  async processText() {
+    const text = this.currentSubroutine.lines[this.currentSubroutine.index]
+
     let skip = false
 
     const onClick = () => {
@@ -464,8 +475,8 @@ export class KirikiriEngine {
               }
             }
           }
-          catch {
-            this.logger.error(`Error processing command: ${command} at line ${index + 1}`)
+          catch (error) {
+            this.logger.error(error)
           }
         }
 
@@ -485,70 +496,10 @@ export class KirikiriEngine {
   }
 
   /**
-   * Adds a command to the call count or increments it if it already exists.
-   */
-  updateCommandCallCount(command: string) {
-    if (!this.commandCallCount[command]) {
-      this.commandCallCount[command] = 0
-    }
-
-    this.commandCallCount[command] += 1
-  }
-
-  /**
    * Runs the specified subroutine. If `force` is true, it will cancel the current subroutine.
    */
-  async runSubroutine(subroutineName: string, options?: {
-    file?: string
-    force?: boolean
-  }) {
-    if (options?.file) {
-      await this.processFile(options.file)
-    }
-
-    if (!this.currentData.script) {
-      throw new Error(`No current script set`)
-    }
-
-    const subroutine = this.subroutines[this.currentData.script][subroutineName]
-
-    if (!subroutine) {
-      this.logger.warn(`Subroutine ${subroutineName} not found`)
-      return
-    }
-
-    if (this.currentData.subroutine && options?.force) {
-      await this.cancelAllSubroutines()
-    }
-
-    this.currentData.subroutine = subroutineName
-
-    this.currentData.subroutine = subroutineName
-    this.subroutineCallStack.push(subroutineName)
-    this.logger.debug(`Running subroutine ${subroutineName}. Callstack: ${this.subroutineCallStack.join(' > ')}`)
-    await this.loadSubroutineAssets()
-    this.setState(EngineState.RUNNING)
-    await this.runLines(subroutine)
-    this.subroutineCallStack.pop()
-    this.currentData.subroutine = this.subroutineCallStack[this.subroutineCallStack.length - 1] || null
-    this.logger.debug(`Finished subroutine ${subroutineName}. Callstack: ${this.subroutineCallStack.join(' > ')}`)
-  }
-
-  /**
-   * Sends the command to cancel all running subroutines.
-   */
-  private async cancelAllSubroutines() {
-    return new Promise<void>((resolve) => {
-      window.addEventListener(EngineEvent.ALL_SUBROUTINES_CANCELLED, async () => {
-        this.logger.info(`Cancelled subroutine ${this.currentData.subroutine}`)
-        resolve()
-      }, { once: true })
-
-      window.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE))
-      window.dispatchEvent(new CustomEvent(EngineEvent.STOP_BGM))
-
-      this.state = EngineState.CANCEL_ALL_SUBROUTINES
-    })
+  async runSubroutine() {
+    // TODO
   }
 
   getState() {

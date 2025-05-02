@@ -17,9 +17,8 @@ describe('macroCommand', () => {
       '[eval exp="x == 3"]',
     ]
 
-    const macro = createMacro(engine, {
+    const macro = createMacro(engine, lines, {
       name: 'changeType_cross',
-      lines,
     })
 
     expect(macro.name).toBe('changeType_cross')
@@ -35,9 +34,8 @@ describe('macroCommand', () => {
       '[endmacro]',
     ]
 
-    const macro = createMacro(engine, {
+    const macro = createMacro(engine, lines, {
       name: 'cwt',
-      lines,
     })
     expect(() => macro.macro({})).not.toThrowError()
   })

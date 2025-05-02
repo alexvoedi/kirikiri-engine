@@ -9,7 +9,9 @@ const schema = z.object({
 /**
  * Implements the `call` command.
  *
- * Calls a script file.
+ * Runs a subroutine.
+ *
+ * Compared to the `jump` command, this will go back to the previous line after the subroutine is finished.
  */
 export async function callCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
@@ -21,10 +23,10 @@ export async function callCommand(engine: KirikiriEngine, props?: Record<string,
       throw new Error(`File ${parsed.storage} not found in game files`)
     }
 
-    await engine.processFile(file)
+    await engine.loadFileContent(file)
 
     if (parsed.target) {
-      await engine.runSubroutine(parsed.target)
+      // TODO
     }
   }
   catch (error) {

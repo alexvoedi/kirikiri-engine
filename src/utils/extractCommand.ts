@@ -1,19 +1,19 @@
 /**
  * Extract the command and its properties from a line of text.
  */
-export function extractCommand(line: string) {
-  const match = /\[(.*)\]|@(.*)/.exec(line)
+export function extractCommand(text: string) {
+  const match = /\[(.*)\]|@(.*)/.exec(text)
   const commandLine = match?.[1] || match?.[2]
 
   if (!commandLine) {
-    throw new Error(`Invalid command line: ${line}`)
+    throw new Error(`Invalid command line: ${text}`)
   }
 
   const parts = commandLine
     .match(/(?:[^\s"']|"[^"]*"|'[^']*')+/g) // Match words or quoted substrings
 
   if (!parts?.length) {
-    throw new Error(`Invalid command line: ${line}`)
+    throw new Error(`Invalid command line: ${text}`)
   }
 
   const [command, ...keyValueStrings] = parts.map(s => s.trim())

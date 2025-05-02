@@ -5,6 +5,6 @@
  */
 export function checkIsCommand(line: string) {
   return (
-    (line.startsWith('[') && line.endsWith(']') && line.length > 2)
+    (line.startsWith('[') && line.length > 2)
   )
 }

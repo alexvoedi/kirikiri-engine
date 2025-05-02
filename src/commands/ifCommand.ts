@@ -4,7 +4,6 @@ import { checkCondition } from '../utils/checkCondition'
 
 const schema = z.object({
   exp: z.string(),
-  lines: z.array(z.string()), // TODO: remove from schema
 }).strict()
 
 /**
@@ -12,12 +11,16 @@ const schema = z.object({
  *
  * Executes a block of code if the given condition is true.
  */
-export async function ifCommand(engine: KirikiriEngine, props?: Record<string, unknown>): Promise<void> {
+export async function ifCommand(engine: KirikiriEngine, lines: string[], props?: Record<string, unknown>): Promise<void> {
   const parsed = schema.parse(props)
 
   const result = await checkCondition(engine, parsed.exp)
 
   if (result) {
-    await engine.runLines(parsed.lines)
+    // continue processing the lines
+  }
+  else {
+    // skip the lines
+    engine.callstack[engine.callstack.length - 1].index += lines.length
   }
 }
