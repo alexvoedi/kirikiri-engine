@@ -1,8 +1,8 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
+import { extractBlockCommand } from '../utils/extractBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
-import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { getPlacholders } from '../utils/getPlaceholders'
 import { getCommand } from './getCommand'
 import { ifCommand } from './ifCommand'
@@ -81,13 +81,11 @@ function processLines(engine: KirikiriEngine, lines: string[]): Array<{
 
           const isBlockCommand = checkIsBlockCommand(command)
           if (isBlockCommand) {
-            const closingIndex = findClosingBlockCommandIndex(command, index, lines)
-
-            const blockLines = lines.slice(index + 1, closingIndex)
+            const { content, to } = extractBlockCommand(command, lines, index)
 
             switch (command) {
               case 'iscript': {
-                const callback = async () => await scriptCommand(engine, blockLines, props)
+                const callback = async () => await scriptCommand(engine, content, props)
 
                 commands.push({
                   command: callback,
@@ -114,7 +112,7 @@ function processLines(engine: KirikiriEngine, lines: string[]): Array<{
               }
             }
 
-            index = closingIndex + 1
+            index = to.line + 1
             break
           }
           else {

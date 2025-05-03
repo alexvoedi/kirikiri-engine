@@ -12,10 +12,10 @@ import { EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
 import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
+import { extractBlockCommand } from '../utils/extractBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { extractLabel } from '../utils/extractLabel'
 import { extractStorage } from '../utils/extractStorage'
-import { findClosingBlockCommandIndex } from '../utils/findClosingBlockCommandIndex'
 import { findFileInTree } from '../utils/findFileInTree'
 import { loadFileContent } from '../utils/loadFile'
 import { removeFileExtension } from '../utils/removeFileExtension'
@@ -264,6 +264,9 @@ export class KirikiriEngine {
     } while (this.callstack.current.index < this.callstack.current.lines.length)
   }
 
+  /**
+   * Processes the current line in the callstack.
+   */
   private async processCurrentLine(): Promise<void> {
     const line = this.callstack.currentLine
 
@@ -368,31 +371,28 @@ export class KirikiriEngine {
    * @param props - The properties of the command.
    */
   private async processBlockCommand(command: string, props: Record<string, string>): Promise<void> {
-    const closingIndex = findClosingBlockCommandIndex(command, this.callstack.current.index, this.callstack.current.lines)
-
-    const blockLines = this.callstack.current.lines.slice(this.callstack.current.index + 1, closingIndex)
+    const { content, to } = extractBlockCommand(command, this.callstack.current.lines, this.callstack.current.index)
 
     switch (command) {
       case 'macro': {
-        const { macro, name } = createMacro(this, blockLines, props)
+        const { macro, name } = createMacro(this, content, props)
         this.macros[name] = macro
-        this.callstack.current.index = closingIndex
         break
       }
       case 'iscript':
-        await scriptCommand(this, blockLines, props)
-        this.callstack.current.index = closingIndex
+        await scriptCommand(this, content, props)
         break
       case 'link': {
-        await linkCommand(this, blockLines, props)
-        this.callstack.current.index = closingIndex
+        await linkCommand(this, content, props)
         break
       }
       case 'if': {
-        await ifCommand(this, blockLines, props)
+        await ifCommand(this, content, props)
         break
       }
     }
+
+    this.callstack.current.index = to.line
   }
 
   /**

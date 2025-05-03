@@ -19,8 +19,4 @@ export async function ifCommand(engine: KirikiriEngine, lines: string[], props?:
   if (result) {
     // continue processing the lines
   }
-  else {
-    // skip the lines
-    engine.callstack.current.index += lines.length
-  }
 }
