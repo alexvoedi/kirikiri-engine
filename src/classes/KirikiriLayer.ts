@@ -103,7 +103,7 @@ export class KirikiriLayer extends Container {
       }
     }
 
-    window.addEventListener(EngineEvent.STOP_TRANSITION, () => {
+    globalThis.addEventListener(EngineEvent.STOP_TRANSITION, () => {
       this.renderer.app.ticker.remove(iterate)
 
       this.stopTransition()
@@ -210,7 +210,7 @@ export class KirikiriLayer extends Container {
 
         if (progress >= 1) {
           const waitForMoveNotifier = new CustomEvent('wm')
-          window.dispatchEvent(waitForMoveNotifier)
+          globalThis.dispatchEvent(waitForMoveNotifier)
 
           this.renderer.app.ticker.remove(iterate)
         }
@@ -244,7 +244,7 @@ export class KirikiriLayer extends Container {
 
         const waitForMoveNotifier = new CustomEvent('wm')
         setTimeout(() => {
-          window.dispatchEvent(waitForMoveNotifier)
+          globalThis.dispatchEvent(waitForMoveNotifier)
         }, time * 1000)
 
         this.renderer.app.ticker.remove(iterate)

@@ -132,7 +132,7 @@ export class KirikiriRenderer {
   }) {
     const { file, layer, page, opacity, visible, x, y } = data
 
-    const texture = Assets.get(file)
+    const texture = Assets.get(file) ?? await Assets.load(file)
 
     const sprite = new Sprite({
       label: file,
@@ -205,19 +205,19 @@ export class KirikiriRenderer {
     }
 
     const onStopTransition = () => {
-      window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
+      globalThis.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
     }
 
     const timeout = setTimeout(() => {
-      window.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
+      globalThis.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
 
-      window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
+      globalThis.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
     }, options.time)
 
-    window.addEventListener(EngineEvent.STOP_TRANSITION, () => {
+    globalThis.addEventListener(EngineEvent.STOP_TRANSITION, () => {
       clearTimeout(timeout)
 
-      window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
+      globalThis.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
     }, { once: true })
   }
 

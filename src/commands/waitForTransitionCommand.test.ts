@@ -30,7 +30,7 @@ describe('waitForTransitionCommand', () => {
 
     const promise = waitForTransitionCommand(engine, props)
 
-    window.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
+    globalThis.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
 
     await expect(promise).resolves.toBeUndefined()
   })

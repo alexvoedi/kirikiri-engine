@@ -12,5 +12,5 @@ const schema = z.object({}).strict()
 export async function pauseBackgroundMusicCommand(_: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  window.dispatchEvent(new CustomEvent(EngineEvent.PAUSE_BGM))
+  globalThis.dispatchEvent(new CustomEvent(EngineEvent.PAUSE_BGM))
 }

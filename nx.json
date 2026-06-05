@@ -2,6 +2,7 @@
   "$schema": "./node_modules/nx/schemas/nx-schema.json",
   "parallel": 8,
   "neverConnectToCloud": true,
+  "analytics": false,
   "plugins": [
     {
       "plugin": "@nx/eslint/plugin",

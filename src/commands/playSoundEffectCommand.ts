@@ -40,12 +40,12 @@ export async function playSoundEffectCommand(engine: KirikiriEngine, props?: Rec
         playing: false,
       },
     })
-    window.dispatchEvent(waitForSoundEffectNotifier)
+    globalThis.dispatchEvent(waitForSoundEffectNotifier)
   })
 
-  window.addEventListener('stopse', () => {
+  globalThis.addEventListener('stopse', () => {
     audio.pause()
-    window.dispatchEvent(waitForSoundEffectNotifier)
+    globalThis.dispatchEvent(waitForSoundEffectNotifier)
   })
 
   return new Promise((resolve) => {

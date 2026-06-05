@@ -12,5 +12,5 @@ const schema = z.object({}).strict()
 export async function stopTransitionCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  window.dispatchEvent(new CustomEvent(EngineEvent.STOP_TRANSITION))
+  globalThis.dispatchEvent(new CustomEvent(EngineEvent.STOP_TRANSITION))
 }

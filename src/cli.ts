@@ -5,18 +5,55 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import process from 'node:process'
-import { Command } from 'commander'
+import { parseArgs } from 'node:util'
 
-const program = new Command()
+const { values } = parseArgs({
+  options: {
+    help: {
+      short: 'h',
+      type: 'boolean',
+    },
+    input: {
+      short: 'i',
+      type: 'string',
+    },
+    output: {
+      short: 'o',
+      type: 'string',
+    },
+    version: {
+      short: 'v',
+      type: 'boolean',
+    },
+  },
+})
 
-program
-  .name('ks-to-json')
-  .description('Convert .ks files to .json format')
-  .version('1.0.0')
-  .requiredOption('-i, --input <directory>', 'Path to the input directory for .ks files')
-  .requiredOption('-o, --output <file>', 'Path and name of the output file')
+function printHelp() {
+  console.log(`Usage: ks-to-json --input <directory> --output <file>
 
-program.parse(process.argv)
+Convert .ks files to .json format
+
+Options:
+  -i, --input <directory>  Path to the input directory for .ks files
+  -o, --output <file>      Path and name of the output file
+  -v, --version            Print version
+  -h, --help               Print help`)
+}
+
+if (values.version) {
+  console.log('1.0.0')
+  process.exit(0)
+}
+
+if (values.help) {
+  printHelp()
+  process.exit(0)
+}
+
+if (!values.input || !values.output) {
+  printHelp()
+  process.exit(1)
+}
 
 /**
  * Generate a json file that contains the file tree of the input directory.
@@ -53,4 +90,4 @@ export function writeFileTreeToJson(inputDir: string, outputFile: string) {
   console.log(`File tree size: ${JSON.stringify(fileTree, null, 2).length} bytes`)
 }
 
-writeFileTreeToJson(program.opts().input, program.opts().output)
+writeFileTreeToJson(values.input, values.output)

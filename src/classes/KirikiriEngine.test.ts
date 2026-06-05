@@ -1,8 +1,5 @@
-import dotenv from 'dotenv'
 import { describe, expect, it } from 'vitest'
 import { setupEngine } from '../testSetup'
-
-dotenv.config()
 
 describe('kirikiriEngine', () => {
   it('processes block commands from the current callstack line', async () => {
@@ -102,5 +99,28 @@ describe('kirikiriEngine', () => {
     expect(loggerWarn).not.toHaveBeenCalledWith(expect.stringContaining('Unknown command: endif'))
     expect(engine.globalScriptContext.sf.firstclear).toBe(0)
     expect(engine.callstack.current.index).toBe(1)
+  })
+
+  it('stops processing the current line after a jump changes the callstack index', async () => {
+    const engine = await setupEngine()
+
+    engine.labels.first = {
+      target: 1,
+    }
+    engine.globalScriptContext.sf.firstclear = 0
+    engine.callstack.push({
+      file: 'first',
+      lines: [
+        '[jump target=*target][eval exp="sf.firstclear=99"]',
+        '*target',
+        '[eval exp="sf.firstclear=1"]',
+      ],
+      index: 0,
+    })
+
+    await (engine as unknown as { processCurrentLine: () => Promise<void> }).processCurrentLine()
+
+    expect(engine.callstack.current.index).toBe(1)
+    expect(engine.globalScriptContext.sf.firstclear).toBe(0)
   })
 })

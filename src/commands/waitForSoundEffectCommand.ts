@@ -27,11 +27,11 @@ export async function waitForSoundEffectCommand(engine: KirikiriEngine, props?: 
     }
     else {
       const handleSoundEffectEnded = () => {
-        window.removeEventListener('ws', handleSoundEffectEnded)
+        globalThis.removeEventListener('ws', handleSoundEffectEnded)
         resolve()
       }
 
-      window.addEventListener('ws', handleSoundEffectEnded)
+      globalThis.addEventListener('ws', handleSoundEffectEnded)
     }
   })
 }

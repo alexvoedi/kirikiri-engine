@@ -12,7 +12,7 @@ export async function waitForClickAndInsertLineBreakCommand(engine: KirikiriEngi
   schema.parse(props)
 
   return new Promise((resolve) => {
-    window.addEventListener('click', async () => {
+    globalThis.addEventListener('click', async () => {
       await engine.addCharacter('\n')
       resolve()
     }, { once: true })

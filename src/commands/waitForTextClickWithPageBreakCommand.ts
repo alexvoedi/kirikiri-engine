@@ -14,7 +14,7 @@ export async function waitForTextClickWithPageBreakCommand(_: KirikiriEngine, pr
   schema.parse(props)
 
   return new Promise((resolve) => {
-    window.addEventListener('click', () => {
+    globalThis.addEventListener('click', () => {
       resolve()
     }, { once: true })
   })

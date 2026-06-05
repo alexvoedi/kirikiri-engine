@@ -26,11 +26,11 @@ export async function waitForMoveCommand(engine: KirikiriEngine, props?: Record<
     }
     else {
       const handleMoveEnded = () => {
-        window.removeEventListener('wm', handleMoveEnded)
+        globalThis.removeEventListener('wm', handleMoveEnded)
         resolve()
       }
 
-      window.addEventListener('wm', handleMoveEnded)
+      globalThis.addEventListener('wm', handleMoveEnded)
     }
   })
 }

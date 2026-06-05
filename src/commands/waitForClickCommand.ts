@@ -12,7 +12,7 @@ export async function waitForClickCommand(engine: KirikiriEngine, props?: Record
   schema.parse(props)
 
   return new Promise((resolve) => {
-    window.addEventListener('click', () => {
+    globalThis.addEventListener('click', () => {
       engine.globalScriptContext.kag.clickCount++
       resolve()
     }, { once: true })

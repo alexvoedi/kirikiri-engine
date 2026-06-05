@@ -15,5 +15,5 @@ const schema = z.object({
 export async function stopSoundEffectCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  window.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE))
+  globalThis.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE))
 }

@@ -242,7 +242,7 @@ export class KirikiriEngine {
     do {
       if (this.state === EngineState.PAUSED) {
         await new Promise<void>((resolve) => {
-          window.addEventListener(EngineEvent.CONTINUE, () => resolve())
+          globalThis.addEventListener(EngineEvent.CONTINUE, () => resolve())
         })
       }
 
@@ -293,8 +293,12 @@ export class KirikiriEngine {
         }
 
         case '@': {
+          const startLine = this.callstack.current.index
           const { command, props } = extractCommand(line)
           await this.execCommand(command, props)
+
+          if (this.callstack.current.index !== startLine)
+            return
 
           this.callstack.current.index += 1
 
@@ -335,6 +339,9 @@ export class KirikiriEngine {
           }
           else {
             await this.execCommand(command, props)
+
+            if (this.callstack.current.index !== startLine)
+              return
 
             column = closingIndex + 1
           }
@@ -457,7 +464,7 @@ export class KirikiriEngine {
     }
 
     if (this.commandStorage.clickskip?.enabled) {
-      window.addEventListener('click', () => {
+      globalThis.addEventListener('click', () => {
         onClick()
       }, { once: true })
     }
@@ -538,7 +545,7 @@ export class KirikiriEngine {
     }
 
     if (this.commandStorage.clickskip?.enabled) {
-      window.removeEventListener('click', onClick)
+      globalThis.removeEventListener('click', onClick)
     }
   }
 
@@ -557,7 +564,7 @@ export class KirikiriEngine {
     this.state = state
 
     if (state === EngineState.RUNNING) {
-      window.dispatchEvent(new CustomEvent(EngineEvent.CONTINUE))
+      globalThis.dispatchEvent(new CustomEvent(EngineEvent.CONTINUE))
     }
 
     this.logger.debug(`Engine state changed to: ${state}`)

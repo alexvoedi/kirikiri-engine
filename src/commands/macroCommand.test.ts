@@ -1,9 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
-import dotenv from 'dotenv'
 import { setupEngine } from '../testSetup'
 import { createMacro } from './macroCommand'
-
-dotenv.config()
 
 describe('macroCommand', () => {
   let engine: KirikiriEngine

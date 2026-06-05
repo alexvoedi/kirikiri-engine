@@ -22,11 +22,11 @@ export async function waitForBackgroundMusicCommand(engine: KirikiriEngine, prop
     }
     else {
       const handleSoundEffectEnded = () => {
-        window.removeEventListener('wl', handleSoundEffectEnded)
+        globalThis.removeEventListener('wl', handleSoundEffectEnded)
         resolve()
       }
 
-      window.addEventListener('wl', handleSoundEffectEnded)
+      globalThis.addEventListener('wl', handleSoundEffectEnded)
     }
   })
 }

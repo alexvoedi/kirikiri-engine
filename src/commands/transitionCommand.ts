@@ -30,10 +30,10 @@ export async function transitionCommand(engine: KirikiriEngine, props?: Record<s
       },
     })
 
-    window.removeEventListener(EngineEvent.TRANSITION_ENDED, onTransitionEnded)
+    globalThis.removeEventListener(EngineEvent.TRANSITION_ENDED, onTransitionEnded)
   }
 
-  window.addEventListener(EngineEvent.TRANSITION_ENDED, onTransitionEnded)
+  globalThis.addEventListener(EngineEvent.TRANSITION_ENDED, onTransitionEnded)
 
   return new Promise((resolve) => {
     merge(engine.commandStorage, {

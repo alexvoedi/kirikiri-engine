@@ -5,6 +5,8 @@ export interface CommandStorage {
     playing?: boolean
   }
   playbgm?: {
+    audio?: HTMLAudioElement
+    cleanup?: () => void
     playing?: boolean
   }
   trans?: {

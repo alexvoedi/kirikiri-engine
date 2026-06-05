@@ -15,7 +15,7 @@ const schema = z.object({
 export async function fadeOutBackgroundMusicCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  window.dispatchEvent(new CustomEvent(EngineEvent.FADEOUT_BGM, {
+  globalThis.dispatchEvent(new CustomEvent(EngineEvent.FADEOUT_BGM, {
     detail: {
       time: parsed.time,
     },

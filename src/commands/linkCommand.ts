@@ -98,7 +98,7 @@ export async function linkCommand(engine: KirikiriEngine, lines: string[], props
 
   engine.renderer.addLink(text, async () => {
     const { ...jumpData } = parsed
-    window.dispatchEvent(new CustomEvent(EngineEvent.CHOICE))
+    globalThis.dispatchEvent(new CustomEvent(EngineEvent.CHOICE))
     await jumpCommand(engine, jumpData)
     engine.setState(EngineState.RUNNING)
     await engine.run()
@@ -108,7 +108,7 @@ export async function linkCommand(engine: KirikiriEngine, lines: string[], props
     await command()
   }
 
-  window.addEventListener(EngineEvent.CHOICE, () => {
+  globalThis.addEventListener(EngineEvent.CHOICE, () => {
     engine.commandStorage.link = {}
   }, { once: true })
 }

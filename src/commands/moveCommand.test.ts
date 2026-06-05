@@ -1,10 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
-import dotenv from 'dotenv'
 import { describe, expect, it } from 'vitest'
 import { setupEngine } from '../testSetup'
 import { moveCommand } from './moveCommand'
-
-dotenv.config()
 
 describe('moveCommand', () => {
   let engine: KirikiriEngine

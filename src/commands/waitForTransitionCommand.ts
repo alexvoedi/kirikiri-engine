@@ -22,7 +22,7 @@ export async function waitForTransitionCommand(engine: KirikiriEngine, props?: R
       resolve()
     }
     else {
-      window.addEventListener(EngineEvent.TRANSITION_ENDED, () => {
+      globalThis.addEventListener(EngineEvent.TRANSITION_ENDED, () => {
         merge(engine.commandStorage, {
           trans: {
             transitioning: false,
