@@ -55,6 +55,8 @@ describe('global_script_context', () => {
 
   it('should have default values for kag', () => {
     expect(GLOBAL_SCRIPT_CONTEXT.kag.stopAllTransitions()).toBeNull()
+    expect(GLOBAL_SCRIPT_CONTEXT.kag.close()).toBeNull()
+    expect(GLOBAL_SCRIPT_CONTEXT.kag.shutdown()).toBeNull()
     expect(GLOBAL_SCRIPT_CONTEXT.kag.clickCount).toBe(0)
   })
 

@@ -187,7 +187,7 @@ export class KirikiriRenderer {
     }
   }
 
-  transition(transitionName: 'universal' | 'scroll' | 'crossfade' | 'turn' | 'rotatezoom', options: {
+  transition(_transitionName: string, options: {
     time: number
     children?: boolean
   }) {

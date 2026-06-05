@@ -13,6 +13,14 @@ export class Callstack {
     this.stack.push(entry)
   }
 
+  pop() {
+    return this.stack.pop()
+  }
+
+  get length() {
+    return this.stack.length
+  }
+
   replace(entry: {
     file: string
     lines: string[]

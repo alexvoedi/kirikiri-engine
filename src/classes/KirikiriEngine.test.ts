@@ -82,6 +82,31 @@ describe('kirikiriEngine', () => {
     expect(engine.callstack.current.index).toBe(1)
   })
 
+  it('processes single-line if blocks with multiple commands in the body', async () => {
+    const engine = await setupEngine()
+    const loggerError = vi.spyOn(engine.logger, 'error')
+
+    Object.assign(engine.globalScriptContext.f, { re_scenario: 0 })
+    engine.callstack.push({
+      file: 'first',
+      lines: [
+        '[if exp="f.re_scenario==0"][rclick enabled=true][history enabled=false][endif]\\',
+      ],
+      index: 0,
+    })
+
+    await (engine as unknown as { processCurrentLine: () => Promise<void> }).processCurrentLine()
+
+    expect(loggerError).not.toHaveBeenCalledWith(expect.stringContaining('No closing block command found'), expect.anything())
+    expect(engine.commandStorage.rclick).toStrictEqual({
+      enabled: true,
+    })
+    expect(engine.commandStorage.history).toStrictEqual({
+      enabled: false,
+    })
+    expect(engine.callstack.current.index).toBe(1)
+  })
+
   it('skips single-line if block content when the condition is false', async () => {
     const engine = await setupEngine()
     const loggerWarn = vi.spyOn(engine.logger, 'warn')

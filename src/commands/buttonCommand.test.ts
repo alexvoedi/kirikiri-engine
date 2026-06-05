@@ -50,4 +50,20 @@ describe('buttonCommand', () => {
 
     expect(addButton).not.toHaveBeenCalled()
   })
+
+  it('runs a button expression without requiring a target', async () => {
+    const engine = await setupEngine()
+    const addButton = vi.spyOn(engine.renderer, 'addButton').mockResolvedValue()
+
+    await buttonCommand(engine, {
+      graphic: 'first.ks',
+      exp: 'sf.firstclear=3',
+    })
+
+    const callback = addButton.mock.calls[0]?.[0].callback
+    expect(callback).toBeDefined()
+
+    await expect(callback?.()).resolves.toBeUndefined()
+    expect(engine.globalScriptContext.sf.firstclear).toBe(3)
+  })
 })

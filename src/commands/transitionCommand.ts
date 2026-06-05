@@ -6,7 +6,7 @@ import { createBooleanSchema, createFloatSchema, createIntegerSchema } from '../
 
 const schema = z.object({
   time: createFloatSchema(),
-  method: z.enum(['universal', 'scroll', 'crossfade', 'turn', 'rotatezoom']).optional().default('crossfade'),
+  method: z.string().optional().default('crossfade'),
   bgcolor: z.string().optional(),
   factor: createFloatSchema().optional(),
   storage: z.string().optional(),

@@ -55,4 +55,16 @@ describe('kirikiriRenderer', () => {
     expect(renderer.app.stage.x).toBe(90)
     expect(renderer.app.stage.y).toBe(55)
   })
+
+  it('applies and resets text alignment style', () => {
+    const renderer = new KirikiriRenderer(document.createElement('canvas'))
+
+    renderer.setStyle({ align: 'center' })
+
+    expect(renderer.textStyle.align).toBe('center')
+
+    renderer.setStyle({ align: 'default' })
+
+    expect(renderer.textStyle.align).toBeUndefined()
+  })
 })

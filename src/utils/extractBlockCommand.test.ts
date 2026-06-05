@@ -132,4 +132,26 @@ describe('extractBlockCommand', () => {
       ],
     })
   })
+
+  it('should find a single-line if block with multiple command tags and a trailing continuation marker', () => {
+    const lines = [
+      '[if exp="f.re_scenario==0"][rclick enabled=true][history enabled=false][endif]\\',
+    ]
+
+    const result = extractBlockCommand('if', lines, 0)
+
+    expect(result).toStrictEqual({
+      from: {
+        line: 0,
+        col: 0,
+      },
+      to: {
+        line: 0,
+        col: 77,
+      },
+      content: [
+        '[rclick enabled=true][history enabled=false]',
+      ],
+    })
+  })
 })

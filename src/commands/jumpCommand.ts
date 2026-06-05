@@ -34,12 +34,16 @@ export async function jumpCommand(engine: KirikiriEngine, props?: Record<string,
     const result = await engine.loadFile(parsed.storage, label)
 
     engine.callstack.replace(result)
+
+    return
   }
 
   if ('storage' in parsed) {
     const result = await engine.loadFile(parsed.storage)
 
     engine.callstack.replace(result)
+
+    return
   }
 
   if ('target' in parsed) {

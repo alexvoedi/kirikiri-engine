@@ -2,6 +2,7 @@ import type { ConsolaInstance } from 'consola'
 import type { CommandStorage } from '../types/CommandStorage'
 import type { Game } from '../types/Game'
 import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
+import type { JsonValue, KirikiriSaveGame } from '../types/KirikiriSaveGame'
 import { createConsola } from 'consola'
 import { getCommand } from '../commands/getCommand'
 import { ifCommand } from '../commands/ifCommand'
@@ -52,6 +53,11 @@ export class KirikiriEngine {
    * All available macros.
    */
   readonly macros: Record<string, (props: Record<string, string>) => Promise<void>> = {}
+
+  private readonly macroDefinitions = new Map<string, {
+    lines: string[]
+    props: Record<string, JsonValue>
+  }>()
 
   /**
    * Subroutine call stack
@@ -138,6 +144,92 @@ export class KirikiriEngine {
     this.callstack.push(result)
 
     await this.run()
+  }
+
+  createSaveGame(): KirikiriSaveGame {
+    return {
+      version: 1,
+      createdAt: new Date().toISOString(),
+      game: {
+        entry: this.game.entry,
+        root: this.game.root,
+      },
+      state: this.state,
+      callstack: this.callstack.stack.map(entry => ({
+        file: entry.file,
+        index: entry.index,
+      })),
+      globalScriptContext: {
+        kag: {
+          clickCount: this.globalScriptContext.kag.clickCount,
+        },
+        f: this.toJsonObject(this.globalScriptContext.f),
+        sf: this.toJsonObject(this.globalScriptContext.sf),
+        tf: this.toJsonObject((this.globalScriptContext as { tf?: Record<string, unknown> }).tf ?? {}),
+      },
+      commandStorage: this.toJsonObject(this.commandStorage),
+      macros: Array.from(this.macroDefinitions.entries()).map(([name, definition]) => ({
+        name,
+        lines: [...definition.lines],
+        props: { ...definition.props },
+      })),
+    }
+  }
+
+  async restoreSaveGame(saveGame: KirikiriSaveGame): Promise<void> {
+    if (saveGame.version !== 1) {
+      throw new Error(`Unsupported save game version: ${saveGame.version}`)
+    }
+
+    this.replaceObject(this.globalScriptContext.f, saveGame.globalScriptContext.f)
+    this.replaceObject(this.globalScriptContext.sf, saveGame.globalScriptContext.sf)
+
+    const scriptContextWithTemp = this.globalScriptContext as { tf?: Record<string, unknown> }
+    if (saveGame.globalScriptContext.tf) {
+      scriptContextWithTemp.tf ??= {}
+      this.replaceObject(scriptContextWithTemp.tf, saveGame.globalScriptContext.tf)
+    }
+
+    this.globalScriptContext.kag.clickCount = saveGame.globalScriptContext.kag.clickCount
+    this.replaceObject(this.commandStorage, saveGame.commandStorage)
+
+    this.clearMacros()
+    for (const macro of saveGame.macros) {
+      this.registerMacro(macro.name, macro.lines, macro.props)
+    }
+
+    this.callstack.stack = []
+    for (const frame of saveGame.callstack) {
+      const entry = await this.loadFile(frame.file)
+      entry.index = frame.index
+      this.callstack.push(entry)
+    }
+
+    this.state = saveGame.state
+  }
+
+  saveGame(slot: string | number): KirikiriSaveGame {
+    const saveGame = this.createSaveGame()
+    this.getStorage().setItem(this.getSaveGameStorageKey(slot), JSON.stringify(saveGame))
+
+    return saveGame
+  }
+
+  async loadSaveGame(slot: string | number): Promise<KirikiriSaveGame> {
+    const serialized = this.getStorage().getItem(this.getSaveGameStorageKey(slot))
+
+    if (!serialized) {
+      throw new Error(`Save game slot ${slot} not found`)
+    }
+
+    const saveGame = JSON.parse(serialized) as KirikiriSaveGame
+    await this.restoreSaveGame(saveGame)
+
+    return saveGame
+  }
+
+  deleteSaveGame(slot: string | number): void {
+    this.getStorage().removeItem(this.getSaveGameStorageKey(slot))
   }
 
   /**
@@ -239,7 +331,7 @@ export class KirikiriEngine {
    * Run the engine from the specified file and index in the callstack.
    */
   async run(): Promise<void> {
-    do {
+    while (this.callstack.length > 0) {
       if (this.state === EngineState.PAUSED) {
         await new Promise<void>((resolve) => {
           globalThis.addEventListener(EngineEvent.CONTINUE, () => resolve(), { once: true })
@@ -248,6 +340,15 @@ export class KirikiriEngine {
 
       if (this.state === EngineState.STOPPED) {
         return
+      }
+
+      if (this.callstack.current.index >= this.callstack.current.lines.length) {
+        if (this.callstack.length === 1) {
+          return
+        }
+
+        this.callstack.pop()
+        continue
       }
 
       try {
@@ -260,7 +361,7 @@ export class KirikiriEngine {
 
         this.callstack.current.index += 1
       }
-    } while (this.callstack.current.index < this.callstack.current.lines.length)
+    }
   }
 
   /**
@@ -409,8 +510,8 @@ export class KirikiriEngine {
 
     switch (command) {
       case 'macro': {
-        const { macro, name } = createMacro(this, content, props)
-        this.macros[name] = macro
+        const { name } = createMacro(this, content, props)
+        this.registerMacro(name, content, props)
         break
       }
       case 'iscript':
@@ -505,6 +606,9 @@ export class KirikiriEngine {
             if (macro) {
               await macro(props)
             }
+            else if (Object.values(COMMAND_BLOCKS).includes(command)) {
+              // Closing tags for inline blocks are consumed by their opener.
+            }
             else if (checkIsBlockCommand(command)) {
               const block = extractBlockCommand(command, [text], index)
 
@@ -566,5 +670,86 @@ export class KirikiriEngine {
     }
 
     this.logger.debug(`Engine state changed to: ${state}`)
+  }
+
+  private registerMacro(name: string, lines: string[], props: Record<string, unknown>) {
+    const normalizedProps = this.toJsonObject(props)
+    const { macro } = createMacro(this, lines, {
+      ...normalizedProps,
+      name,
+    })
+
+    this.macros[name] = macro
+    this.macroDefinitions.delete(name)
+    this.macroDefinitions.set(name, {
+      lines: [...lines],
+      props: normalizedProps,
+    })
+  }
+
+  private clearMacros() {
+    Object.keys(this.macros).forEach((name) => {
+      delete this.macros[name]
+    })
+
+    this.macroDefinitions.clear()
+  }
+
+  private getStorage(): Storage {
+    if (!globalThis.localStorage) {
+      throw new Error('localStorage is not available')
+    }
+
+    return globalThis.localStorage
+  }
+
+  private getSaveGameStorageKey(slot: string | number) {
+    return `kirikiri-engine:${this.game.root}:${this.game.entry}:save:${slot}`
+  }
+
+  private replaceObject(target: object, source: Record<string, JsonValue>) {
+    const targetRecord = target as Record<string, unknown>
+
+    Object.keys(targetRecord).forEach((key) => {
+      delete targetRecord[key]
+    })
+
+    Object.assign(targetRecord, this.toJsonObject(source))
+  }
+
+  private toJsonObject(value: object): Record<string, JsonValue> {
+    return this.toJsonValue(value) as Record<string, JsonValue>
+  }
+
+  private toJsonValue(value: unknown): JsonValue | undefined {
+    if (value === null || typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+      return value
+    }
+
+    if (Array.isArray(value)) {
+      return value
+        .map(item => this.toJsonValue(item))
+        .filter(item => item !== undefined)
+    }
+
+    if (typeof value === 'object') {
+      if (typeof EventTarget !== 'undefined' && value instanceof EventTarget) {
+        return undefined
+      }
+
+      const result: Record<string, JsonValue> = {}
+
+      Object.entries(value).forEach(([key, item]) => {
+        const jsonValue = this.toJsonValue(item)
+
+        if (jsonValue !== undefined) {
+          result[key] = jsonValue
+        }
+      })
+
+      return result
+    }
+
+    return undefined
   }
 }

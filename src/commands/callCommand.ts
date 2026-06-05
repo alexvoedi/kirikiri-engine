@@ -2,7 +2,7 @@ import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
 
 const schema = z.object({
-  storage: z.string(),
+  storage: z.string().optional(),
   target: z.string().optional(),
 }).strict()
 
@@ -16,20 +16,24 @@ const schema = z.object({
 export async function callCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  try {
-    const file = engine.getFullFilePath(parsed.storage)
+  const current = engine.callstack.current
+  current.index += 1
+  const label = parsed.target?.replace(/^\*/, '')
 
-    if (!file) {
-      throw new Error(`File ${parsed.storage} not found in game files`)
+  if (parsed.storage) {
+    try {
+      const result = await engine.loadFile(parsed.storage, label)
+      engine.callstack.push(result)
     }
-
-    await engine.loadFileContent(file)
-
-    if (parsed.target) {
-      // TODO
+    catch (error) {
+      engine.logger.warn(`Skipping call to ${parsed.storage}: ${error}`)
     }
   }
-  catch (error) {
-    engine.logger.debug(`Error loading file ${parsed.storage}: ${error}`)
+  else {
+    engine.callstack.push({
+      file: current.file,
+      lines: current.lines,
+      index: label ? engine.labels[current.file][label] : 0,
+    })
   }
 }

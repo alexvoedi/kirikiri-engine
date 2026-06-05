@@ -83,7 +83,8 @@ export function extractBlockCommand(openingBlockCommand: string, lines: string[]
           }
         }
 
-        columnIndex += toEnd - fromEnd + 1
+        columnIndex = toEnd + 1
+        continue
       }
 
       columnIndex++

@@ -28,6 +28,7 @@ import { quakeCommand } from './quakeCommand'
 import { releaseLayerImageCommand } from './releaseLayerImageCommand'
 import { resetWaitCommand } from './resetWaitCommand'
 import { resumeBackgroundMusicCommand } from './resumeBackgroundMusicCommand'
+import { returnCommand } from './returnCommand'
 import { rightClickCommand } from './rightClickCommand'
 import { scenarioExitCommand } from './scenarioExitCommand'
 import { startanchorCommand } from './startanchorCommand'
@@ -77,6 +78,7 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   locate: storePositionCommand,
   laycount: changeLayerCountCommand,
   call: callCommand,
+  return: returnCommand,
   loadplugin: loadPluginCommand,
   fgzoom: async () => { /* TODO: find out what this does */ },
   wfgzoom: async () => { /* TODO: find out what this does */ },
