@@ -97,6 +97,7 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   resumebgm: resumeBackgroundMusicCommand,
   quake: quakeCommand,
   clickskip: clickSkipCommand,
+  gvolmenu: async () => { /* Plugin-provided volume menu command. */ },
 }
 
 export function getCommand(command: string): (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void> {

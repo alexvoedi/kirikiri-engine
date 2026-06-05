@@ -1,4 +1,4 @@
-import type { FileTree } from 'src/types/FileTree'
+import type { FileTree } from '../types/FileTree'
 import { describe, expect, it } from 'vitest'
 import { findFileInTree } from './findFileInTree'
 

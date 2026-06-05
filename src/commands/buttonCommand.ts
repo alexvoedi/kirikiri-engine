@@ -1,6 +1,8 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { EngineState } from '../enums/EngineState'
 import { createBooleanSchema } from '../schemas'
+import { checkCondition } from '../utils/checkCondition'
 import { jumpCommand } from './jumpCommand'
 
 const schema = z.object({
@@ -19,11 +21,17 @@ const schema = z.object({
 export async function buttonCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
+  if (parsed.cond && !await checkCondition(engine, parsed.cond)) {
+    return
+  }
+
   const callback = async () => {
     if (parsed.target) {
       await jumpCommand(engine, {
         target: parsed.target,
       })
+      engine.setState(EngineState.RUNNING)
+      await engine.run()
     }
     else {
       throw new Error('No target specified for button command')

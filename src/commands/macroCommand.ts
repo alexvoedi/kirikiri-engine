@@ -81,7 +81,7 @@ function processLines(engine: KirikiriEngine, lines: string[]): Array<{
 
           const isBlockCommand = checkIsBlockCommand(command)
           if (isBlockCommand) {
-            const { content, to } = extractBlockCommand(command, lines, index)
+            const { content, to } = extractBlockCommand(command, lines.slice(index))
 
             switch (command) {
               case 'iscript': {
@@ -102,7 +102,9 @@ function processLines(engine: KirikiriEngine, lines: string[]): Array<{
                 break
               }
               case 'if': {
-                const callback = async () => await ifCommand(engine, lines, props)
+                const callback = async () => {
+                  await ifCommand(engine, lines, props)
+                }
 
                 commands.push({
                   command: callback,
@@ -112,7 +114,7 @@ function processLines(engine: KirikiriEngine, lines: string[]): Array<{
               }
             }
 
-            index = to.line + 1
+            index += to.line + 1
             break
           }
           else {

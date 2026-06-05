@@ -1,5 +1,5 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
-import { merge } from 'lodash'
+import { merge } from 'es-toolkit'
 import { z } from 'zod'
 import { createBooleanSchema } from '../schemas'
 

@@ -8,7 +8,7 @@ import { ifCommand } from '../commands/ifCommand'
 import { linkCommand } from '../commands/linkCommand'
 import { createMacro } from '../commands/macroCommand'
 import { scriptCommand } from '../commands/scriptCommand'
-import { EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
+import { COMMAND_BLOCKS, EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
 import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
@@ -106,7 +106,6 @@ export class KirikiriEngine {
     this.callstack = new Callstack()
 
     this.logger = createConsola({
-      fancy: true,
       level: this.options.loglevel,
       formatOptions: {
         colors: true,
@@ -303,6 +302,7 @@ export class KirikiriEngine {
         }
 
         case '[': {
+          const startLine = this.callstack.current.index
           const closingIndex = line.indexOf(']', column)
 
           if (closingIndex === -1) {
@@ -312,9 +312,32 @@ export class KirikiriEngine {
           const text = line.slice(column, closingIndex + 1)
           const { command, props } = extractCommand(text)
 
-          await this.execCommand(command, props)
+          if (Object.values(COMMAND_BLOCKS).includes(command)) {
+            column = closingIndex + 1
+          }
+          else if (checkIsBlockCommand(command)) {
+            const block = extractBlockCommand(command, this.callstack.current.lines.slice(startLine), column)
 
-          column = closingIndex + 1
+            if (command === 'if' && block.to.line === 0) {
+              const shouldProcessContent = await ifCommand(this, block.content, props)
+              column = shouldProcessContent ? closingIndex + 1 : block.to.col + 1
+              break
+            }
+
+            const to = await this.processBlockCommand(command, props, column)
+
+            if (to.line === startLine) {
+              column = to.col + 1
+            }
+            else {
+              column = line.length
+            }
+          }
+          else {
+            await this.execCommand(command, props)
+
+            column = closingIndex + 1
+          }
 
           break
         }
@@ -370,8 +393,12 @@ export class KirikiriEngine {
    * @param command - The block command to process.
    * @param props - The properties of the command.
    */
-  private async processBlockCommand(command: string, props: Record<string, string>): Promise<void> {
-    const { content, to } = extractBlockCommand(command, this.callstack.current.lines, this.callstack.current.index)
+  private async processBlockCommand(command: string, props: Record<string, string>, column = 0): Promise<{
+    line: number
+    col: number
+  }> {
+    const startLine = this.callstack.current.index
+    const { content, to } = extractBlockCommand(command, this.callstack.current.lines.slice(startLine), column)
 
     switch (command) {
       case 'macro': {
@@ -392,7 +419,12 @@ export class KirikiriEngine {
       }
     }
 
-    this.callstack.current.index = to.line
+    this.callstack.current.index = startLine + to.line
+
+    return {
+      line: startLine + to.line,
+      col: to.col,
+    }
   }
 
   /**
@@ -443,6 +475,7 @@ export class KirikiriEngine {
       }
 
       const { command, props, to } = extractCommand(text, index)
+      let nextIndex = to + 1
 
       try {
         switch (command) {
@@ -467,6 +500,23 @@ export class KirikiriEngine {
             if (macro) {
               await macro(props)
             }
+            else if (checkIsBlockCommand(command)) {
+              const block = extractBlockCommand(command, [text], index)
+
+              switch (command) {
+                case 'iscript':
+                  await scriptCommand(this, block.content, props)
+                  break
+                case 'link':
+                  await linkCommand(this, block.content, props)
+                  break
+                case 'if':
+                  await ifCommand(this, block.content, props)
+                  break
+              }
+
+              nextIndex = block.to.col + 1
+            }
             else {
               const commandFunction = getCommand(command)
 
@@ -484,7 +534,7 @@ export class KirikiriEngine {
         this.logger.error(error)
       }
 
-      index = to + 1
+      index = nextIndex
     }
 
     if (this.commandStorage.clickskip?.enabled) {

@@ -1,4 +1,4 @@
-import type { FileTree } from 'src/types/FileTree'
+import type { FileTree } from '../types/FileTree'
 import { removeFileExtension } from './removeFileExtension'
 
 function search(file: string, tree: FileTree | null, path: string, results: string[]): void {

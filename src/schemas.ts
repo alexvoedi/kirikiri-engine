@@ -1,8 +1,7 @@
-import type { ZodTypeDef } from 'zod'
 import { z } from 'zod'
 import { scaleRange } from './utils/scaleRange'
 
-export function createBooleanSchema(): z.Schema<boolean, ZodTypeDef, string | boolean> {
+export function createBooleanSchema() {
   return z.union([z.enum(['true', 'false']), z.boolean()]).transform((value) => {
     if (typeof value === 'boolean') {
       return value

@@ -2,6 +2,12 @@ import { Application, Assets, Container, Rectangle, Sprite, Text, Texture } from
 import { EngineEvent } from '../constants'
 import { KirikiriLayer } from './KirikiriLayer'
 
+interface TextStyleOverrides {
+  fill?: string | number
+  fontSize?: number
+  dropShadow?: boolean
+}
+
 export class KirikiriRenderer {
   readonly app: Application
 
@@ -25,6 +31,7 @@ export class KirikiriRenderer {
 
   private currentMessageLayer: 'message0' | 'message1' = 'message0'
   private currentMessagePage: 'back' | 'fore' = 'fore'
+  private textStyleOverrides: TextStyleOverrides = {}
 
   /**
    * Global offset.
@@ -33,9 +40,9 @@ export class KirikiriRenderer {
     x: number
     y: number
   } = {
-      x: 16,
-      y: 16,
-    }
+    x: 16,
+    y: 16,
+  }
 
   /**
    * Message layer margins.
@@ -46,11 +53,11 @@ export class KirikiriRenderer {
     top: number
     bottom: number
   } = {
-      left: 12,
-      right: 8,
-      top: 8,
-      bottom: 8,
-    }
+    left: 12,
+    right: 8,
+    top: 8,
+    bottom: 8,
+  }
 
   /**
    * Store a unscaled location to be used in another command.
@@ -59,9 +66,9 @@ export class KirikiriRenderer {
     x: number
     y: number
   } = {
-      x: 0,
-      y: 0,
-    }
+    x: 0,
+    y: 0,
+  }
 
   constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -130,8 +137,8 @@ export class KirikiriRenderer {
     const sprite = new Sprite({
       label: file,
       texture,
-      width: this.app.screen.width,
-      height: this.app.screen.height,
+      width: this.SCALE * texture.width,
+      height: this.SCALE * texture.height,
     })
 
     const layerGroup = this.getOrCreateLayer(layer)
@@ -330,16 +337,32 @@ export class KirikiriRenderer {
   setFont(data: {
     color?: string
     shadow?: boolean | 'default' | 'no'
+    size?: number | 'default'
   }) {
-    const textElement = this[this.currentMessageLayer][this.currentMessagePage].getChildByLabel('textelement') as Text
-
-    if (textElement) {
-      if (data.color && data.color !== 'default') {
-        textElement.style.fill = data.color
+    if (data.color) {
+      if (data.color === 'default') {
+        delete this.textStyleOverrides.fill
       }
+      else {
+        this.textStyleOverrides.fill = data.color
+      }
+    }
 
-      if (data.shadow) {
-        textElement.style.dropShadow = true
+    if (data.shadow !== undefined) {
+      if (data.shadow === 'default') {
+        delete this.textStyleOverrides.dropShadow
+      }
+      else {
+        this.textStyleOverrides.dropShadow = data.shadow !== false && data.shadow !== 'no'
+      }
+    }
+
+    if (data.size !== undefined) {
+      if (data.size === 'default') {
+        delete this.textStyleOverrides.fontSize
+      }
+      else {
+        this.textStyleOverrides.fontSize = this.SCALE * data.size
       }
     }
   }
@@ -496,7 +519,8 @@ export class KirikiriRenderer {
 
     this.resetLocation()
 
-    buttonNormal.interactive = true
+    buttonNormal.eventMode = 'static'
+    buttonNormal.cursor = 'pointer'
 
     buttonNormal.on('pointerover', () => {
       buttonNormal.texture = hoverTexture
@@ -514,7 +538,7 @@ export class KirikiriRenderer {
       buttonNormal.texture = hoverTexture
     })
 
-    buttonNormal.on('click', async () => {
+    buttonNormal.on('pointertap', async () => {
       await data.callback()
     })
 
@@ -524,7 +548,7 @@ export class KirikiriRenderer {
   /**
    * Add a link to the message layer.
    */
-  addLink(text: string, onClick: () => void) {
+  addLink(text: string, onClick: () => void | Promise<void>) {
     const topOffset = this[this.currentMessageLayer][this.currentMessagePage].children.reduce((acc, child) => {
       if (child instanceof Text) {
         return acc + child.height
@@ -536,11 +560,17 @@ export class KirikiriRenderer {
       text,
       label: 'link',
       style: this.textStyle,
-      x: this.location.x,
-      y: topOffset + this.SCALE * this.messageLayerMargins.top,
+      x: this.SCALE * (this.globalOffset.x + this.messageLayerMargins.left + this.location.x),
+      y: this.location.y
+        ? this.SCALE * (this.globalOffset.y + this.messageLayerMargins.top + this.location.y)
+        : topOffset + this.SCALE * this.messageLayerMargins.top,
     })
 
-    element.interactive = true
+    this.resetLocation()
+
+    element.eventMode = 'static'
+    element.cursor = 'pointer'
+    element.hitArea = new Rectangle(0, 0, Math.max(element.width, this.wordWrapWidth), element.height)
 
     element.on('pointerover', () => {
       element.style.fill = 0xFF0000
@@ -550,7 +580,7 @@ export class KirikiriRenderer {
       element.style.fill = 0xFFFFFF
     })
 
-    element.on('pointerup', onClick)
+    element.on('pointertap', onClick)
 
     this[this.currentMessageLayer][this.currentMessagePage].addChild(element)
   }
@@ -599,6 +629,7 @@ export class KirikiriRenderer {
       breakWords: true,
       wordWrap: true,
       wordWrapWidth: this.wordWrapWidth,
+      ...this.textStyleOverrides,
     }
   }
 }

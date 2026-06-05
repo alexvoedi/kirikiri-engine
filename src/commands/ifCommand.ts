@@ -11,12 +11,8 @@ const schema = z.object({
  *
  * Executes a block of code if the given condition is true.
  */
-export async function ifCommand(engine: KirikiriEngine, lines: string[], props?: Record<string, unknown>): Promise<void> {
+export async function ifCommand(engine: KirikiriEngine, lines: string[], props?: Record<string, unknown>): Promise<boolean> {
   const parsed = schema.parse(props)
 
-  const result = await checkCondition(engine, parsed.exp)
-
-  if (result) {
-    // continue processing the lines
-  }
+  return await checkCondition(engine, parsed.exp)
 }
