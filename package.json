@@ -16,8 +16,10 @@
   ],
   "exports": {
     ".": {
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.mjs",
+      "import": {
+        "types": "./dist/index.d.mts",
+        "default": "./dist/index.mjs"
+      },
       "require": {
         "types": "./dist/index.d.cts",
         "default": "./dist/index.cjs"
@@ -25,8 +27,10 @@
     },
     "./package.json": "./package.json",
     "./cli": {
-      "types": "./dist/cli.d.mts",
-      "import": "./dist/cli.mjs",
+      "import": {
+        "types": "./dist/cli.d.mts",
+        "default": "./dist/cli.mjs"
+      },
       "require": {
         "types": "./dist/cli.d.cts",
         "default": "./dist/cli.cjs"
@@ -71,7 +75,7 @@
     "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.1.8",
     "@vitest/ui": "4.1.8",
-    "eslint": "^10.4.1",
+    "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "knip": "^6.16.0",
