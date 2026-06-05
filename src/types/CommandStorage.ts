@@ -36,6 +36,14 @@ export interface CommandStorage {
     output?: boolean
     enabled?: boolean
   }
+  startanchor?: {
+    enabled: boolean
+    file?: string
+    index?: number
+  }
+  style?: {
+    align?: 'left' | 'right' | 'center' | 'top' | 'bottom' | 'default'
+  }
   delay?: {
     speed?: 'nowait' | 'user' | number
   }

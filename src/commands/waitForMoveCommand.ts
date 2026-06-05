@@ -1,5 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
+import { merge } from 'es-toolkit'
 import { z } from 'zod'
+import { EngineEvent } from '../constants'
 import { createBooleanSchema } from '../schemas'
 import { checkCondition } from '../utils/checkCondition'
 
@@ -26,11 +28,15 @@ export async function waitForMoveCommand(engine: KirikiriEngine, props?: Record<
     }
     else {
       const handleMoveEnded = () => {
-        globalThis.removeEventListener('wm', handleMoveEnded)
+        merge(engine.commandStorage, {
+          move: {
+            moving: false,
+          },
+        })
         resolve()
       }
 
-      globalThis.addEventListener('wm', handleMoveEnded)
+      globalThis.addEventListener(EngineEvent.MOVE_ENDED, handleMoveEnded, { once: true })
     }
   })
 }

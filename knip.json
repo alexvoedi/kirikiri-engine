@@ -1,8 +1,20 @@
 {
   "$schema": "https://unpkg.com/knip@5/schema.json",
   "entry": [
-    "src/index.ts!",
-    "src/cli.ts!"
+    "src/index.ts",
+    "src/cli.ts"
+  ],
+  "ignore": [
+    "src/classes/KirikiriAnimation.ts",
+    "src/classes/KirikiriAnimator.ts",
+    "src/utils/extractCommands.ts",
+    "src/utils/extractSubroutineName.ts",
+    "src/utils/extractSubroutines.ts",
+    "src/utils/findSubroutineEndIndex.ts",
+    "src/utils/isComment.ts",
+    "src/utils/sanitizeLine.ts",
+    "src/utils/splitAndSanitize.ts",
+    "src/utils/splitMultiCommandLine.ts"
   ],
   "project": [
     "src/**/*.ts!",

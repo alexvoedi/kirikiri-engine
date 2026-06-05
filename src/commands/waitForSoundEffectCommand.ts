@@ -1,5 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { EngineEvent } from '../constants'
 import { createBooleanSchema } from '../schemas'
 import { checkCondition } from '../utils/checkCondition'
 
@@ -27,11 +28,10 @@ export async function waitForSoundEffectCommand(engine: KirikiriEngine, props?: 
     }
     else {
       const handleSoundEffectEnded = () => {
-        globalThis.removeEventListener('ws', handleSoundEffectEnded)
         resolve()
       }
 
-      globalThis.addEventListener('ws', handleSoundEffectEnded)
+      globalThis.addEventListener(EngineEvent.SOUND_EFFECT_ENDED, handleSoundEffectEnded, { once: true })
     }
   })
 }

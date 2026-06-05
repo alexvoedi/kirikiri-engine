@@ -3,6 +3,9 @@
   "parallel": 8,
   "neverConnectToCloud": true,
   "analytics": false,
+  "tui": {
+    "enabled": false
+  },
   "plugins": [
     {
       "plugin": "@nx/eslint/plugin",

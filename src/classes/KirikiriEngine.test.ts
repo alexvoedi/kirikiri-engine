@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { EngineEvent } from '../constants'
 import { setupEngine } from '../testSetup'
 
 describe('kirikiriEngine', () => {
@@ -122,5 +123,31 @@ describe('kirikiriEngine', () => {
 
     expect(engine.callstack.current.index).toBe(1)
     expect(engine.globalScriptContext.sf.firstclear).toBe(0)
+  })
+
+  it('removes the click-skip listener after processing text', async () => {
+    const engine = await setupEngine()
+    const addEventListener = vi.spyOn(globalThis, 'addEventListener')
+    const removeEventListener = vi.spyOn(globalThis, 'removeEventListener')
+
+    vi.spyOn(engine, 'addCharacter').mockResolvedValue(undefined)
+
+    engine.commandStorage.clickskip = {
+      enabled: true,
+    }
+    engine.callstack.push({
+      file: 'first',
+      lines: ['abc'],
+      index: 0,
+    })
+
+    await engine.processText()
+
+    const addedClickListener = addEventListener.mock.calls.find(([event]) => event === EngineEvent.CLICK)
+    const removedClickListener = removeEventListener.mock.calls.find(([event]) => event === EngineEvent.CLICK)
+
+    expect(addedClickListener).toBeDefined()
+    expect(removedClickListener).toBeDefined()
+    expect(removedClickListener?.[1]).toBe(addedClickListener?.[1])
   })
 })

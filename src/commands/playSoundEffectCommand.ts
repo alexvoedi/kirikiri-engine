@@ -1,6 +1,7 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { merge } from 'es-toolkit'
 import { z } from 'zod'
+import { EngineEvent } from '../constants'
 import { checkCondition } from '../utils/checkCondition'
 
 const schema = z.object({
@@ -32,21 +33,30 @@ export async function playSoundEffectCommand(engine: KirikiriEngine, props?: Rec
     audio.loop = parsed.loop
   }
 
-  const waitForSoundEffectNotifier = new CustomEvent('ws')
+  const waitForSoundEffectNotifier = new CustomEvent(EngineEvent.SOUND_EFFECT_ENDED)
 
-  audio.addEventListener('ended', () => {
+  function cleanup() {
     merge(engine.commandStorage, {
       playse: {
         playing: false,
       },
     })
+
+    globalThis.removeEventListener(EngineEvent.STOP_SE, onStop)
+  }
+
+  function onStop() {
+    audio.pause()
+    cleanup()
+    globalThis.dispatchEvent(waitForSoundEffectNotifier)
+  }
+
+  audio.addEventListener('ended', () => {
+    cleanup()
     globalThis.dispatchEvent(waitForSoundEffectNotifier)
   })
 
-  globalThis.addEventListener('stopse', () => {
-    audio.pause()
-    globalThis.dispatchEvent(waitForSoundEffectNotifier)
-  })
+  globalThis.addEventListener(EngineEvent.STOP_SE, onStop, { once: true })
 
   return new Promise((resolve) => {
     audio.addEventListener('canplay', () => {

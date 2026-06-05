@@ -1,8 +1,10 @@
+import type { ContainerChild } from 'pixi.js'
 import { Application, Assets, Container, Rectangle, Sprite, Text, Texture } from 'pixi.js'
 import { EngineEvent } from '../constants'
 import { KirikiriLayer } from './KirikiriLayer'
 
 interface TextStyleOverrides {
+  align?: 'left' | 'center' | 'right'
   fill?: string | number
   fontSize?: number
   dropShadow?: boolean
@@ -105,13 +107,7 @@ export class KirikiriRenderer {
   }
 
   async loadAssets(files: string[]): Promise<void> {
-    return new Promise((resolve) => {
-      Assets.load(files, (progress) => {
-        if (progress >= 0.2) {
-          resolve()
-        }
-      })
-    })
+    await Assets.load(files)
   }
 
   /**
@@ -204,21 +200,22 @@ export class KirikiriRenderer {
       this.base.transition(options.time)
     }
 
+    let timeout: ReturnType<typeof setTimeout>
+
     const onStopTransition = () => {
+      clearTimeout(timeout)
+      globalThis.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
+
       globalThis.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
     }
 
-    const timeout = setTimeout(() => {
+    timeout = setTimeout(() => {
       globalThis.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
 
       globalThis.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
     }, options.time)
 
-    globalThis.addEventListener(EngineEvent.STOP_TRANSITION, () => {
-      clearTimeout(timeout)
-
-      globalThis.dispatchEvent(new CustomEvent(EngineEvent.TRANSITION_ENDED))
-    }, { once: true })
+    globalThis.addEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
   }
 
   setPosition({
@@ -330,8 +327,7 @@ export class KirikiriRenderer {
    * Calculate the word wrap width for the message box.
    */
   get wordWrapWidth() {
-    // the number should not be hardcoded
-    return 2 * 768 - this.SCALE * (2 * this.globalOffset.x + this.messageLayerMargins.left + this.messageLayerMargins.right)
+    return this.renderedWidth - this.SCALE * (2 * this.globalOffset.x + this.messageLayerMargins.left + this.messageLayerMargins.right)
   }
 
   setFont(data: {
@@ -367,6 +363,22 @@ export class KirikiriRenderer {
     }
   }
 
+  setStyle(data: {
+    align?: 'left' | 'right' | 'center' | 'top' | 'bottom' | 'default'
+  }) {
+    if (data.align !== undefined) {
+      if (data.align === 'default' || data.align === 'left' || data.align === 'top') {
+        delete this.textStyleOverrides.align
+      }
+      else if (data.align === 'bottom') {
+        this.textStyleOverrides.align = 'right'
+      }
+      else {
+        this.textStyleOverrides.align = data.align
+      }
+    }
+  }
+
   /**
    * The quake function creates a shaking effect with random movements on the x and y axes.
    * The maximum movement from the default position is determined by the hmax and vmax parameters.
@@ -383,8 +395,8 @@ export class KirikiriRenderer {
     const startY = this.app.stage.y
 
     const shake = (delta: { deltaTime: number }) => {
-      this.app.stage.x = Math.random() * hmax
-      this.app.stage.y = Math.random() * vmax
+      this.app.stage.x = startX + (Math.random() * 2 - 1) * hmax
+      this.app.stage.y = startY + (Math.random() * 2 - 1) * vmax
 
       timer -= (delta.deltaTime * 10)
 
@@ -607,13 +619,15 @@ export class KirikiriRenderer {
   getTreeString() {
     const tree: string[] = []
 
-    const traverse = (node: any, depth: number) => {
+    const traverse = (node: ContainerChild, depth: number) => {
       const indent = ' '.repeat(depth * 2)
       tree.push(`${indent}${node.label} (${node.constructor.name})`)
 
-      node.children.forEach((child: any) => {
-        traverse(child, depth + 1)
-      })
+      if (node instanceof Container) {
+        node.children.forEach((child) => {
+          traverse(child, depth + 1)
+        })
+      }
     }
 
     traverse(this.app.stage, 0)

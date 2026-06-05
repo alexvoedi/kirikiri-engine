@@ -17,33 +17,91 @@ describe('playBackgroundMusicCommand', () => {
     const audio = {
       loop: false,
       src: '',
+      play: vi.fn(),
+      removeEventListener: vi.fn(),
     } as unknown as HTMLAudioElement
 
-    vi.spyOn(window, 'Audio').mockImplementation((src?: string) => {
+    function AudioMock(src?: string) {
       if (src) {
         audio.src = src
       }
 
       audio.addEventListener = (event: string, callback: (ev: Event) => void) => {
-        if (event === 'ended') {
-          callback(new Event('ended'))
+        if (event === 'canplay') {
+          callback(new Event('canplay'))
         }
       }
 
       audio.pause = vi.fn()
 
       return audio
-    })
+    }
+
+    vi.spyOn(globalThis, 'Audio').mockImplementation(AudioMock)
 
     const props = {
       storage: 'bgm.mp3',
       loop: 'true',
     }
 
-    playBackgroundMusicCommand(engine, props)
+    await playBackgroundMusicCommand(engine, props)
 
     expect(engine.getFullFilePath).toHaveBeenCalledWith(props.storage)
     expect(audio.loop).toBe(true)
     expect(audio.src).toBe('https://example.com/bgm.mp3')
+  })
+
+  it('stops the previous background music before playing a new track', async () => {
+    const audios: Array<HTMLAudioElement & {
+      listeners: Record<string, Array<(ev: Event) => void>>
+      pause: ReturnType<typeof vi.fn>
+      play: ReturnType<typeof vi.fn>
+      src: string
+    }> = []
+
+    function AudioMock(src?: string) {
+      const audio = {
+        listeners: {},
+        loop: false,
+        pause: vi.fn(),
+        play: vi.fn(),
+        src: src ?? '',
+        volume: 1,
+        addEventListener(event: string, callback: (ev: Event) => void) {
+          this.listeners[event] ||= []
+          this.listeners[event].push(callback)
+
+          if (event === 'canplay') {
+            callback(new Event('canplay'))
+          }
+        },
+        removeEventListener(event: string, callback: (ev: Event) => void) {
+          this.listeners[event] = this.listeners[event]?.filter(listener => listener !== callback) ?? []
+        },
+      } as HTMLAudioElement & {
+        listeners: Record<string, Array<(ev: Event) => void>>
+        pause: ReturnType<typeof vi.fn>
+        play: ReturnType<typeof vi.fn>
+        src: string
+      }
+
+      audios.push(audio)
+
+      return audio
+    }
+
+    vi.spyOn(globalThis, 'Audio').mockImplementation(AudioMock)
+
+    await playBackgroundMusicCommand(engine, {
+      storage: 'm60.ogg',
+    })
+    await playBackgroundMusicCommand(engine, {
+      storage: 'bgm-v01.ogg',
+    })
+
+    expect(audios[0].pause).toHaveBeenCalledOnce()
+    expect(audios[1].play).toHaveBeenCalledOnce()
+    expect(engine.commandStorage.playbgm?.audio?.src).toBe('https://example.com/bgm-v01.ogg')
+    expect(engine.commandStorage.playbgm?.playing).toBe(true)
   })
 })

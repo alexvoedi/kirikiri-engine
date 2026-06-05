@@ -242,7 +242,7 @@ export class KirikiriEngine {
     do {
       if (this.state === EngineState.PAUSED) {
         await new Promise<void>((resolve) => {
-          globalThis.addEventListener(EngineEvent.CONTINUE, () => resolve())
+          globalThis.addEventListener(EngineEvent.CONTINUE, () => resolve(), { once: true })
         })
       }
 
@@ -464,9 +464,7 @@ export class KirikiriEngine {
     }
 
     if (this.commandStorage.clickskip?.enabled) {
-      globalThis.addEventListener('click', () => {
-        onClick()
-      }, { once: true })
+      globalThis.addEventListener(EngineEvent.CLICK, onClick, { once: true })
     }
 
     let index = 0
@@ -545,7 +543,7 @@ export class KirikiriEngine {
     }
 
     if (this.commandStorage.clickskip?.enabled) {
-      globalThis.removeEventListener('click', onClick)
+      globalThis.removeEventListener(EngineEvent.CLICK, onClick)
     }
   }
 

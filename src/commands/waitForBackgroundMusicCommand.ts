@@ -1,5 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { z } from 'zod'
+import { EngineEvent } from '../constants'
 import { createBooleanSchema } from '../schemas'
 
 const schema = z.object({
@@ -14,19 +15,18 @@ const schema = z.object({
 export async function waitForBackgroundMusicCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  const playing = engine.commandStorage.playse?.playing ?? false
+  const playing = engine.commandStorage.playbgm?.playing ?? false
 
   return new Promise((resolve) => {
     if (!playing) {
       resolve()
     }
     else {
-      const handleSoundEffectEnded = () => {
-        globalThis.removeEventListener('wl', handleSoundEffectEnded)
+      const handleBackgroundMusicEnded = () => {
         resolve()
       }
 
-      globalThis.addEventListener('wl', handleSoundEffectEnded)
+      globalThis.addEventListener(EngineEvent.BACKGROUND_MUSIC_ENDED, handleBackgroundMusicEnded, { once: true })
     }
   })
 }

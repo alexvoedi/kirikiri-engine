@@ -1,4 +1,5 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
+import { merge } from 'es-toolkit'
 import { z } from 'zod'
 
 const schema = z.object({
@@ -11,7 +12,11 @@ const schema = z.object({
  * Applies a style to message layers.
  */
 export async function styleCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  schema.parse(props)
+  const parsed = schema.parse(props)
 
-  engine.logger.warn(`Unimplemented command: style`)
+  merge(engine.commandStorage, {
+    style: parsed,
+  })
+
+  engine.renderer.setStyle(parsed)
 }

@@ -34,7 +34,7 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
     audio.loop = parsed.loop
   }
 
-  const waitForBackgroundMusicNotifier = new CustomEvent('wl')
+  const waitForBackgroundMusicNotifier = new CustomEvent(EngineEvent.BACKGROUND_MUSIC_ENDED)
 
   function cleanup(options?: {
     pause?: boolean

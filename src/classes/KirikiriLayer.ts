@@ -91,6 +91,8 @@ export class KirikiriLayer extends Container {
     const step = 1000 / (duration * 60)
 
     let progress = 0
+    let onStopTransition: () => void
+
     const iterate = (delta: { deltaTime: number }) => {
       progress = Math.min(progress + delta.deltaTime * step, 1)
 
@@ -98,16 +100,19 @@ export class KirikiriLayer extends Container {
 
       if (progress >= 1) {
         this.renderer.app.ticker.remove(iterate)
+        globalThis.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
 
         this.stopTransition()
       }
     }
 
-    globalThis.addEventListener(EngineEvent.STOP_TRANSITION, () => {
+    onStopTransition = () => {
       this.renderer.app.ticker.remove(iterate)
 
       this.stopTransition()
-    }, { once: true })
+    }
+
+    globalThis.addEventListener(EngineEvent.STOP_TRANSITION, onStopTransition, { once: true })
 
     this.renderer.app.ticker.add(iterate)
   }
@@ -209,7 +214,7 @@ export class KirikiriLayer extends Container {
         }
 
         if (progress >= 1) {
-          const waitForMoveNotifier = new CustomEvent('wm')
+          const waitForMoveNotifier = new CustomEvent(EngineEvent.MOVE_ENDED)
           globalThis.dispatchEvent(waitForMoveNotifier)
 
           this.renderer.app.ticker.remove(iterate)
@@ -221,8 +226,8 @@ export class KirikiriLayer extends Container {
     }
 
     // Handle multiple waypoints
-    const iterate = (delta: { deltaTime: number }) => {
-      elapsedTime += delta.deltaTime
+    const iterate = (delta: { elapsedMS: number }) => {
+      elapsedTime += delta.elapsedMS
 
       const progress = Math.min(elapsedTime / totalTime, 1)
       const segmentIndex = Math.floor(progress * (path.length - 1))
@@ -242,10 +247,8 @@ export class KirikiriLayer extends Container {
         pageObj.y = path[path.length - 1].y
         pageObj.alpha = path[path.length - 1].opacity
 
-        const waitForMoveNotifier = new CustomEvent('wm')
-        setTimeout(() => {
-          globalThis.dispatchEvent(waitForMoveNotifier)
-        }, time * 1000)
+        const waitForMoveNotifier = new CustomEvent(EngineEvent.MOVE_ENDED)
+        globalThis.dispatchEvent(waitForMoveNotifier)
 
         this.renderer.app.ticker.remove(iterate)
       }

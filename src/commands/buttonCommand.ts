@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { EngineState } from '../enums/EngineState'
 import { createBooleanSchema } from '../schemas'
 import { checkCondition } from '../utils/checkCondition'
+import { evalCommand } from './evalCommand'
 import { jumpCommand } from './jumpCommand'
 
 const schema = z.object({
@@ -26,6 +27,12 @@ export async function buttonCommand(engine: KirikiriEngine, props?: Record<strin
   }
 
   const callback = async () => {
+    if (parsed.exp) {
+      await evalCommand(engine, {
+        exp: parsed.exp,
+      })
+    }
+
     if (parsed.target) {
       await jumpCommand(engine, {
         target: parsed.target,
@@ -33,7 +40,7 @@ export async function buttonCommand(engine: KirikiriEngine, props?: Record<strin
       engine.setState(EngineState.RUNNING)
       await engine.run()
     }
-    else {
+    else if (!parsed.exp) {
       throw new Error('No target specified for button command')
     }
   }
