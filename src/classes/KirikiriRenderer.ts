@@ -107,7 +107,13 @@ export class KirikiriRenderer {
   }
 
   async loadAssets(files: string[]): Promise<void> {
-    await Assets.load(files)
+    const preloadableFiles = files.filter(file => !isDeferredAssetUrl(file))
+
+    if (preloadableFiles.length === 0) {
+      return
+    }
+
+    await Assets.load(preloadableFiles)
   }
 
   /**
@@ -128,7 +134,7 @@ export class KirikiriRenderer {
   }) {
     const { file, layer, page, opacity, visible, x, y } = data
 
-    const texture = Assets.get(file) ?? await Assets.load(file)
+    const texture = await this.loadTexture(file)
 
     const sprite = new Sprite({
       label: file,
@@ -148,6 +154,15 @@ export class KirikiriRenderer {
         y,
       },
     )
+  }
+
+  private async loadTexture(file: string): Promise<Texture> {
+    if (isDeferredAssetUrl(file)) {
+      const image = await loadImageElement(file)
+      return Texture.from(image)
+    }
+
+    return Assets.get(file) ?? await Assets.load(file)
   }
 
   getLayersArr() {
@@ -194,10 +209,10 @@ export class KirikiriRenderer {
     const layers = this.getLayersArr()
 
     if (options.children) {
-      layers.forEach(layer => layer.transition(options.time))
+      layers.forEach(layer => layer.transition(_transitionName, options.time))
     }
     else {
-      this.base.transition(options.time)
+      this.base.transition(_transitionName, options.time)
     }
 
     let timeout: ReturnType<typeof setTimeout>
@@ -646,4 +661,25 @@ export class KirikiriRenderer {
       ...this.textStyleOverrides,
     }
   }
+}
+
+function isDeferredAssetUrl(file: string): boolean {
+  return file.startsWith('blob:') || file.startsWith('data:')
+}
+
+async function loadImageElement(src: string): Promise<HTMLImageElement> {
+  const image = new Image()
+  image.decoding = 'async'
+  image.src = src
+
+  if (image.complete && image.naturalWidth > 0) {
+    return image
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    image.addEventListener('load', () => resolve(), { once: true })
+    image.addEventListener('error', () => reject(new Error(`Failed to load image ${src}`)), { once: true })
+  })
+
+  return image
 }

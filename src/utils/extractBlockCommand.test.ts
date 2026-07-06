@@ -154,4 +154,26 @@ describe('extractBlockCommand', () => {
       ],
     })
   })
+
+  it('accepts endfif as an endif alias for shipped scripts', () => {
+    const lines = [
+      '[if exp="sf.waitCnt<10"][jump target=*alpharom][endfif]\\',
+    ]
+
+    const result = extractBlockCommand('if', lines, 0)
+
+    expect(result).toStrictEqual({
+      from: {
+        line: 0,
+        col: 0,
+      },
+      to: {
+        line: 0,
+        col: 54,
+      },
+      content: [
+        '[jump target=*alpharom]',
+      ],
+    })
+  })
 })

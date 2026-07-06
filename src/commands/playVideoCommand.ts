@@ -15,7 +15,7 @@ export async function playVideoCommand(engine: KirikiriEngine, props?: Record<st
 
   const video = document.createElement('video')
 
-  video.src = engine.getFullFilePath(parsed.storage)
+  video.src = await engine.getAssetUrl(parsed.storage)
 
   video.style.position = 'absolute'
   video.style.left = '0'

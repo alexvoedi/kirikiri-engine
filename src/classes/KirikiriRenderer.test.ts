@@ -16,6 +16,19 @@ describe('kirikiriRenderer', () => {
     expect(load).toHaveBeenCalledWith(['image-a.png', 'image-b.png'])
   })
 
+  it('skips blob urls during batch preloading', async () => {
+    const renderer = new KirikiriRenderer(document.createElement('canvas'))
+    const load = vi.spyOn(Assets, 'load').mockResolvedValue({})
+
+    await renderer.loadAssets([
+      'image-a.png',
+      'blob:http://127.0.0.1:1337/example',
+      'data:image/png;base64,AAAA',
+    ])
+
+    expect(load).toHaveBeenCalledWith(['image-a.png'])
+  })
+
   it('calculates word wrap width from renderer dimensions', () => {
     const renderer = new KirikiriRenderer(document.createElement('canvas'))
 

@@ -18,7 +18,7 @@ const schema = z.object({
 export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  const fullPath = engine.getFullFilePath(parsed.storage)
+  const fullPath = await engine.getAssetUrl(parsed.storage)
 
   engine.commandStorage.playbgm?.cleanup?.()
 

@@ -1,4 +1,7 @@
 export { KirikiriEngine } from './classes/KirikiriEngine'
 export { EngineState } from './enums/EngineState'
 export { Loglevel } from './enums/Loglevel'
+export { HttpStorageProvider } from './storage/HttpStorageProvider'
+export { Xp3StorageProvider } from './storage/Xp3StorageProvider'
 export type { KirikiriSaveGame } from './types/KirikiriSaveGame'
+export type { StorageProvider } from './types/StorageProvider'

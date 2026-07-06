@@ -3,6 +3,7 @@ import type { CommandStorage } from '../types/CommandStorage'
 import type { Game } from '../types/Game'
 import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
 import type { JsonValue, KirikiriSaveGame } from '../types/KirikiriSaveGame'
+import type { StorageProvider } from '../types/StorageProvider'
 import { createConsola } from 'consola'
 import { getCommand } from '../commands/getCommand'
 import { ifCommand } from '../commands/ifCommand'
@@ -12,13 +13,12 @@ import { scriptCommand } from '../commands/scriptCommand'
 import { COMMAND_BLOCKS, EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
 import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
+import { createStorageProvider } from '../storage/createStorageProvider'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractBlockCommand } from '../utils/extractBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
 import { extractLabel } from '../utils/extractLabel'
 import { extractStorage } from '../utils/extractStorage'
-import { findFileInTree } from '../utils/findFileInTree'
-import { loadFileContent } from '../utils/loadFile'
 import { removeFileExtension } from '../utils/removeFileExtension'
 import { Callstack } from './Callstack'
 import { KirikiriRenderer } from './KirikiriRenderer'
@@ -48,6 +48,8 @@ export class KirikiriEngine {
    * Logger instance.
    */
   readonly logger: ConsolaInstance
+
+  readonly storage: StorageProvider
 
   /**
    * All available macros.
@@ -108,6 +110,7 @@ export class KirikiriEngine {
       loglevel: 0,
     }
 
+    this.storage = createStorageProvider(game)
     this.renderer = new KirikiriRenderer(canvas)
     this.callstack = new Callstack()
 
@@ -268,8 +271,22 @@ export class KirikiriEngine {
           continue
         }
 
+        const normalizedStorage = storage.toLowerCase()
+        if (
+          normalizedStorage.endsWith('.ogg')
+          || normalizedStorage.endsWith('.wav')
+          || normalizedStorage.endsWith('.mp3')
+          || normalizedStorage.endsWith('.mp4')
+          || normalizedStorage.endsWith('.mpg')
+          || normalizedStorage.endsWith('.mpeg')
+        ) {
+          index += 1
+
+          continue
+        }
+
         try {
-          const path = this.getFullFilePath(storage)
+          const path = await this.getAssetUrl(storage)
 
           filesToLoad.add(path)
         }
@@ -309,7 +326,7 @@ export class KirikiriEngine {
    * Load the file content with the correct encoding.
    */
   async loadFileContent(filename: string): Promise<string[]> {
-    const content = await loadFileContent(filename, this.game.root, this.game.files)
+    const content = await this.storage.readTextFile(filename, 'shift-jis')
 
     return content.split('\n')
   }
@@ -317,14 +334,12 @@ export class KirikiriEngine {
   /**
    * Given a filename, get the full path to the file.
    */
-  getFullFilePath(filename: string) {
-    const foundFile = findFileInTree(filename, this.game.files)
+  async getAssetUrl(filename: string) {
+    return this.storage.resolveAssetUrl(filename)
+  }
 
-    if (!foundFile) {
-      throw new Error(`File ${filename} not found`)
-    }
-
-    return `${this.game.root}/${foundFile}`
+  async getFullFilePath(filename: string) {
+    return this.getAssetUrl(filename)
   }
 
   /**

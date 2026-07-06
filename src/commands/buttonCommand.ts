@@ -46,7 +46,7 @@ export async function buttonCommand(engine: KirikiriEngine, props?: Record<strin
   }
 
   await engine.renderer.addButton({
-    file: engine.getFullFilePath(parsed.graphic),
+    file: await engine.getAssetUrl(parsed.graphic),
     callback,
   })
 }

@@ -26,7 +26,7 @@ const schema = z.object({
 export async function imageCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
 
-  const file = engine.getFullFilePath(parsed.storage)
+  const file = await engine.getAssetUrl(parsed.storage)
 
   if (!file) {
     throw new Error(`File ${parsed.storage}.png not found in game files`)

@@ -80,7 +80,7 @@ export class KirikiriLayer extends Container {
   /**
    * Transition between between the fore and back. The fore layer slowly fades out such that the back layer is visible. If both layers are the same, it will skip the transition.
    */
-  transition(duration: number) {
+  transition(method: string, duration: number) {
     this.transitioning = true
 
     if (this.foreAndBackAreSame()) {
@@ -93,23 +93,51 @@ export class KirikiriLayer extends Container {
     let progress = 0
     let onStopTransition: () => void
 
+    const sequentialCrossfade = method === 'crossfade' && this.label !== 'base'
+    let swappedContent = false
+
+    if (sequentialCrossfade) {
+      this.back.visible = false
+    }
+
     const iterate = (delta: { deltaTime: number }) => {
       progress = Math.min(progress + delta.deltaTime * step, 1)
 
-      this.fore.alpha = 1 - this.smoothstep(progress)
+      if (sequentialCrossfade) {
+        if (progress < 0.5) {
+          this.fore.alpha = 1 - this.smoothstep(progress * 2)
+        }
+        else {
+          if (!swappedContent) {
+            this.fore.removeChildren()
+            this.back.children.forEach(child => this.fore.addChild(child))
+            this.fore.alpha = 0
+            swappedContent = true
+          }
+
+          this.fore.alpha = this.smoothstep((progress - 0.5) * 2)
+        }
+      }
+      else {
+        this.fore.alpha = 1 - this.smoothstep(progress)
+      }
 
       if (progress >= 1) {
         this.renderer.app.ticker.remove(iterate)
         globalThis.removeEventListener(EngineEvent.STOP_TRANSITION, onStopTransition)
 
-        this.stopTransition()
+        this.stopTransition({
+          swappedContent,
+        })
       }
     }
 
     onStopTransition = () => {
       this.renderer.app.ticker.remove(iterate)
 
-      this.stopTransition()
+      this.stopTransition({
+        swappedContent,
+      })
     }
 
     globalThis.addEventListener(EngineEvent.STOP_TRANSITION, onStopTransition, { once: true })
@@ -117,16 +145,21 @@ export class KirikiriLayer extends Container {
     this.renderer.app.ticker.add(iterate)
   }
 
-  stopTransition() {
+  stopTransition(options?: {
+    swappedContent?: boolean
+  }) {
     if (!this.transitioning)
       return
 
     this.fore.alpha = 0
 
-    this.fore.removeChildren()
-    this.back.children.forEach(child => this.fore.addChild(child))
+    if (!options?.swappedContent) {
+      this.fore.removeChildren()
+      this.back.children.forEach(child => this.fore.addChild(child))
+    }
 
     this.fore.alpha = 1
+    this.back.visible = true
 
     this.transitioning = false
   }

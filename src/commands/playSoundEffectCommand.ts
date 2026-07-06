@@ -25,7 +25,7 @@ export async function playSoundEffectCommand(engine: KirikiriEngine, props?: Rec
     return
   }
 
-  const fullPath = engine.getFullFilePath(parsed.storage)
+  const fullPath = await engine.getAssetUrl(parsed.storage)
 
   const audio = new Audio(fullPath)
 

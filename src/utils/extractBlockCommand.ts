@@ -2,6 +2,10 @@ import { COMMAND_BLOCKS } from '../constants'
 import { checkIsBlockCommand } from './checkIsBlockCommand'
 import { extractCommand } from './extractCommand'
 
+const BLOCK_COMMAND_ALIASES: Record<string, string[]> = {
+  endif: ['endfif'],
+}
+
 /**
  * Find the corresponding closing block command index for a given block command.
  */
@@ -38,7 +42,7 @@ export function extractBlockCommand(openingBlockCommand: string, lines: string[]
         if (command === openingBlockCommand) {
           nestedCounter++
         }
-        else if (command === closingBlockCommand) {
+        else if (isClosingBlockCommand(command, closingBlockCommand)) {
           nestedCounter--
         }
 
@@ -95,4 +99,12 @@ export function extractBlockCommand(openingBlockCommand: string, lines: string[]
   }
 
   throw new Error(`No closing block command found for "${openingBlockCommand}".`)
+}
+
+function isClosingBlockCommand(command: string, closingBlockCommand: string): boolean {
+  if (command === closingBlockCommand) {
+    return true
+  }
+
+  return BLOCK_COMMAND_ALIASES[closingBlockCommand]?.includes(command) ?? false
 }

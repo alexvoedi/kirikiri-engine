@@ -8,9 +8,7 @@ describe('playBackgroundMusicCommand', () => {
   beforeEach(async () => {
     engine = await setupEngine()
 
-    vi.spyOn(engine, 'getFullFilePath').mockImplementation((filename: string) => {
-      return `https://example.com/${filename}`
-    })
+    vi.spyOn(engine, 'getAssetUrl').mockImplementation(async (filename: string) => `https://example.com/${filename}`)
   })
 
   it('plays background music', async () => {
@@ -46,7 +44,7 @@ describe('playBackgroundMusicCommand', () => {
 
     await playBackgroundMusicCommand(engine, props)
 
-    expect(engine.getFullFilePath).toHaveBeenCalledWith(props.storage)
+    expect(engine.getAssetUrl).toHaveBeenCalledWith(props.storage)
     expect(audio.loop).toBe(true)
     expect(audio.src).toBe('https://example.com/bgm.mp3')
   })

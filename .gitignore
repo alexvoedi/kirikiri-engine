@@ -24,3 +24,7 @@ coverage/
 
 # Cache
 .eslintcache
+tmp/raw-extracted/
+
+# Original data
+raw

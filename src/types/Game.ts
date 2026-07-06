@@ -1,4 +1,5 @@
 import type { FileTree } from './FileTree'
+import type { StorageProvider } from './StorageProvider'
 
 export interface Game {
   /**
@@ -14,5 +15,10 @@ export interface Game {
   /**
    * The file tree.
    */
-  files: FileTree
+  files?: FileTree
+
+  /**
+   * Optional custom storage backend.
+   */
+  storage?: StorageProvider
 }
