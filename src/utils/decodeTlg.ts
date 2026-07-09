@@ -63,8 +63,9 @@ export function decodeTlg(bytes: Uint8Array): TlgImage {
       offset += dataSize
 
       if (compressionFlag === 0) {
-        channels.push(decompressTlgLzss(channelData, expectedBlockLength, text, textWriteIndex))
-        textWriteIndex = decompressState.writeIndex
+        const decompressed = decompressTlgLzss(channelData, expectedBlockLength, text, textWriteIndex)
+        channels.push(decompressed.output)
+        textWriteIndex = decompressed.writeIndex
       }
       else {
         const copy = new Uint8Array(expectedBlockLength)
@@ -74,7 +75,7 @@ export function decodeTlg(bytes: Uint8Array): TlgImage {
     }
 
     const yLimit = Math.min(yBlock + blockHeight, height)
-    const channelOffsets = new Array(colors).fill(0)
+    const channelOffsets = Array.from<number>({ length: colors }).fill(0)
 
     for (let y = yBlock; y < yLimit; y += 1) {
       const currentLineOffset = y * width * 4
@@ -105,17 +106,15 @@ export function decodeTlg(bytes: Uint8Array): TlgImage {
     pixels,
   }
 }
-
-const decompressState = {
-  writeIndex: 0,
-}
-
 function decompressTlgLzss(
   input: Uint8Array,
   expectedLength: number,
   text: Uint8Array,
   initialWriteIndex: number,
-): Uint8Array {
+): {
+  output: Uint8Array
+  writeIndex: number
+} {
   const output = new Uint8Array(expectedLength)
   let inputOffset = 0
   let outputOffset = 0
@@ -123,8 +122,10 @@ function decompressTlgLzss(
   let writeIndex = initialWriteIndex
 
   while (inputOffset < input.length && outputOffset < expectedLength) {
-    if (((flags >>>= 1) & 0x100) === 0) {
-      flags = input[inputOffset] | 0xFF00
+    flags >>>= 1
+
+    if ((flags & 0x100) === 0) {
+      flags = (input[inputOffset] ?? 0) | 0xFF00
       inputOffset += 1
     }
 
@@ -162,8 +163,10 @@ function decompressTlgLzss(
     }
   }
 
-  decompressState.writeIndex = writeIndex
-  return output
+  return {
+    output,
+    writeIndex,
+  }
 }
 
 function composeTlg5Line3(
@@ -272,7 +275,7 @@ function composeTlg5FirstLine(
     pixels[pixelOffset + 1] = previousGreen
     pixels[pixelOffset + 2] = previousBlue
 
-    if (alpha) {
+    if (alpha !== undefined) {
       previousAlpha = (previousAlpha + alpha[channelOffsets[3] + x]) & 0xFF
       pixels[pixelOffset + 3] = previousAlpha
     }

@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 
+import { Buffer } from 'node:buffer'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import process from 'node:process'
@@ -12,14 +13,14 @@ const SEGMENT_FLAG_COMPRESSED = 0x01
 const FILE_FLAG_PROTECTED = 0x80000000
 
 function printHelp() {
-  console.log(`Usage: node scripts/xp3-unpack.mjs --input <archive.xp3> --output <directory>
+  process.stdout.write(`Usage: node scripts/xp3-unpack.mjs --input <archive.xp3> --output <directory>
 
 Unpack a plain Kirikiri XP3 archive.
 
 Options:
   -i, --input <archive.xp3>   Path to the XP3 archive
   -o, --output <directory>    Output directory
-  -h, --help                  Print help`)
+  -h, --help                  Print help\n`)
 }
 
 function parseArgs(argv) {
@@ -262,7 +263,7 @@ async function main() {
 
   const entries = await unpackArchive(args.input, args.output)
 
-  console.log(`Extracted ${entries.length} entries from ${args.input} to ${args.output}`)
+  process.stdout.write(`Extracted ${entries.length} entries from ${args.input} to ${args.output}\n`)
 }
 
 main().catch((error) => {

@@ -12,8 +12,9 @@ describe('transitionCommand', () => {
       method: 'wave',
     })
 
-    expect(transition).toHaveBeenCalledWith('wave', {
+    expect(transition).toHaveBeenCalledWith({
       time: 300,
+      method: 'wave',
       children: true,
     })
   })

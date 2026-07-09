@@ -22,4 +22,28 @@ export async function videoCommand(engine: KirikiriEngine, props?: Record<string
   merge(engine.commandStorage, {
     video: parsed,
   })
+
+  const element = engine.commandStorage.video?.element
+
+  if (!element) {
+    return
+  }
+
+  element.style.display = parsed.visible === false ? 'none' : 'block'
+
+  if (parsed.left !== undefined) {
+    element.style.left = `${parsed.left}px`
+  }
+
+  if (parsed.top !== undefined) {
+    element.style.top = `${parsed.top}px`
+  }
+
+  if (parsed.width !== undefined) {
+    element.style.width = `${parsed.width}px`
+  }
+
+  if (parsed.height !== undefined) {
+    element.style.height = `${parsed.height}px`
+  }
 }

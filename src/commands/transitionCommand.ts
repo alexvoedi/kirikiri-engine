@@ -42,10 +42,7 @@ export async function transitionCommand(engine: KirikiriEngine, props?: Record<s
       },
     })
 
-    engine.renderer.transition(parsed.method, {
-      time: parsed.time,
-      children: parsed.children,
-    })
+    engine.renderer.transition(parsed)
 
     resolve()
   })

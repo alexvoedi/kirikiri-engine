@@ -11,10 +11,7 @@ const schema = z.object({}).strict()
 export async function waitForClickCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  return new Promise((resolve) => {
-    globalThis.addEventListener('click', () => {
-      engine.globalScriptContext.kag.clickCount++
-      resolve()
-    }, { once: true })
+  await engine.waitForGameClick({
+    countClick: true,
   })
 }

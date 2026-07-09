@@ -102,6 +102,12 @@ export async function linkCommand(engine: KirikiriEngine, lines: string[], props
     await jumpCommand(engine, jumpData)
     engine.setState(EngineState.RUNNING)
     await engine.run()
+  }, {
+    interaction: {
+      type: 'link',
+      target: parsed.target,
+      storage: parsed.storage,
+    },
   })
 
   for (const command of afterTextCommands) {

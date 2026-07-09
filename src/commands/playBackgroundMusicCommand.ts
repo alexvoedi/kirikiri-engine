@@ -3,6 +3,7 @@ import { merge } from 'es-toolkit'
 import { z } from 'zod'
 import { EngineEvent } from '../constants'
 import { createBooleanSchema, createIntegerSchema } from '../schemas'
+import { getBgmVolume } from './bgmOptionCommand'
 
 const schema = z.object({
   storage: z.string(),
@@ -116,6 +117,8 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
         audio,
         cleanup,
         playing: true,
+        storage: parsed.storage,
+        loop: parsed.loop,
       },
     })
 
@@ -126,11 +129,12 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
 
       const fadeDuration = parsed.time
       const fadeStep = 50
-      const volumeStep = 1 / (fadeDuration / fadeStep)
+      const targetVolume = getBgmVolume(engine)
+      const volumeStep = targetVolume / (fadeDuration / fadeStep)
 
       fadeInterval = setInterval(() => {
-        if (audio.volume + volumeStep >= 1) {
-          audio.volume = 1
+        if (audio.volume + volumeStep >= targetVolume) {
+          audio.volume = targetVolume
           if (fadeInterval)
             clearInterval(fadeInterval)
         }
@@ -140,6 +144,7 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
       }, fadeStep)
     }
     else {
+      audio.volume = getBgmVolume(engine)
       audio.play()
     }
 
@@ -151,6 +156,8 @@ export async function playBackgroundMusicCommand(engine: KirikiriEngine, props?:
       audio,
       cleanup,
       playing: false,
+      storage: parsed.storage,
+      loop: parsed.loop,
     },
   })
 

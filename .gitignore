@@ -28,3 +28,7 @@ tmp/raw-extracted/
 
 # Original data
 raw
+*.ttf
+
+# AI
+AGENTS.md

@@ -10,12 +10,8 @@ const schema = z.object({}).strict()
  *
  * A page break is indicated by a special symbol that is visible in the message layer like an arrow.
  */
-export async function waitForTextClickWithPageBreakCommand(_: KirikiriEngine, props?: Record<string, string>): Promise<void> {
+export async function waitForTextClickWithPageBreakCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  return new Promise((resolve) => {
-    globalThis.addEventListener('click', () => {
-      resolve()
-    }, { once: true })
-  })
+  await engine.waitForGameClick()
 }

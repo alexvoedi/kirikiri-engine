@@ -33,7 +33,8 @@ export async function imageCommand(engine: KirikiriEngine, props?: Record<string
   }
 
   await engine.renderer.setImage({
-    file,
     ...parsed,
+    file,
+    storage: parsed.storage,
   })
 }

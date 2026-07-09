@@ -19,19 +19,28 @@ export async function waitForSoundEffectCommand(engine: KirikiriEngine, props?: 
   const parsed = schema.parse(props)
 
   const isConditionMet = parsed.cond ? await checkCondition(engine, parsed.cond) : true
-
-  const playing = engine.commandStorage.playse?.playing ?? false
+  const buf = parsed.buf ?? '0'
+  const playing = parsed.buf
+    ? engine.commandStorage.playse?.byBuffer?.[buf]?.playing ?? false
+    : engine.commandStorage.playse?.playing ?? false
 
   return new Promise((resolve) => {
     if (!isConditionMet || !playing) {
       resolve()
     }
     else {
-      const handleSoundEffectEnded = () => {
+      const handleSoundEffectEnded = (event: Event) => {
+        const soundEffectEvent = event as CustomEvent<{ buf?: string }>
+
+        if (parsed.buf && soundEffectEvent.detail?.buf !== buf) {
+          return
+        }
+
+        globalThis.removeEventListener(EngineEvent.SOUND_EFFECT_ENDED, handleSoundEffectEnded)
         resolve()
       }
 
-      globalThis.addEventListener(EngineEvent.SOUND_EFFECT_ENDED, handleSoundEffectEnded, { once: true })
+      globalThis.addEventListener(EngineEvent.SOUND_EFFECT_ENDED, handleSoundEffectEnded)
     }
   })
 }

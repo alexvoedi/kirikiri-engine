@@ -13,7 +13,11 @@ const schema = z.object({
  * Stops a sound effect.
  */
 export async function stopSoundEffectCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
-  schema.parse(props)
+  const parsed = schema.parse(props)
 
-  globalThis.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE))
+  globalThis.dispatchEvent(new CustomEvent(EngineEvent.STOP_SE, {
+    detail: {
+      buf: parsed.buf,
+    },
+  }))
 }

@@ -1,7 +1,14 @@
 import type { Renderable } from 'pixi.js'
+import type { TransitionProfile } from '../utils/resolveTransitionProfile'
 import type { KirikiriRenderer } from './KirikiriRenderer'
-import { Container, Sprite } from 'pixi.js'
+import { Container, Graphics, Sprite } from 'pixi.js'
 import { EngineEvent } from '../constants'
+import { createTransitionMask } from './KirikiriRenderer'
+
+interface KirikiriLayerChildMetadata {
+  __kirikiriStorage?: string
+  __kirikiriInteraction?: unknown
+}
 
 interface KirikiriLayerAttributes {
   x?: number
@@ -33,7 +40,16 @@ export class KirikiriLayer extends Container {
 
   readonly margins?: Margins
 
+  private readonly pageMetrics: Record<'back' | 'fore', {
+    width?: number
+    height?: number
+  }> = {
+    back: {},
+    fore: {},
+  }
+
   transitioning?: boolean = false
+  private transitionCleanup?: () => void
 
   constructor(readonly renderer: KirikiriRenderer, readonly label: string, options?: {
     margins?: Margins
@@ -80,8 +96,13 @@ export class KirikiriLayer extends Container {
   /**
    * Transition between between the fore and back. The fore layer slowly fades out such that the back layer is visible. If both layers are the same, it will skip the transition.
    */
-  transition(method: string, duration: number) {
+  transition(profile: TransitionProfile, duration: number) {
     this.transitioning = true
+
+    if (this.back.children.length === 0) {
+      this.transitioning = false
+      return
+    }
 
     if (this.foreAndBackAreSame()) {
       this.stopTransition()
@@ -93,8 +114,42 @@ export class KirikiriLayer extends Container {
     let progress = 0
     let onStopTransition: () => void
 
-    const sequentialCrossfade = method === 'crossfade' && this.label !== 'base'
+    const sequentialCrossfade = profile.kind === 'crossfade' && this.label !== 'base'
     let swappedContent = false
+    const original = {
+      alpha: this.fore.alpha,
+      x: this.fore.x,
+      y: this.fore.y,
+      rotation: this.fore.rotation,
+      scaleX: this.fore.scale.x,
+      scaleY: this.fore.scale.y,
+      pivotX: this.fore.pivot.x,
+      pivotY: this.fore.pivot.y,
+      mask: this.fore.mask,
+    }
+    const mask = !sequentialCrossfade && ['wipe', 'circle', 'blinds', 'wave'].includes(profile.kind)
+      ? new Graphics()
+      : undefined
+
+    if (mask) {
+      this.fore.addChild(mask)
+      this.fore.mask = mask
+    }
+
+    this.transitionCleanup = () => {
+      this.fore.alpha = original.alpha
+      this.fore.x = original.x
+      this.fore.y = original.y
+      this.fore.rotation = original.rotation
+      this.fore.scale.set(original.scaleX, original.scaleY)
+      this.fore.pivot.set(original.pivotX, original.pivotY)
+      this.fore.mask = original.mask
+
+      if (mask) {
+        mask.removeFromParent()
+        mask.destroy()
+      }
+    }
 
     if (sequentialCrossfade) {
       this.back.visible = false
@@ -119,7 +174,7 @@ export class KirikiriLayer extends Container {
         }
       }
       else {
-        this.fore.alpha = 1 - this.smoothstep(progress)
+        this.applyTransitionProfile(profile, progress, mask)
       }
 
       if (progress >= 1) {
@@ -151,6 +206,8 @@ export class KirikiriLayer extends Container {
     if (!this.transitioning)
       return
 
+    this.transitionCleanup?.()
+    this.transitionCleanup = undefined
     this.fore.alpha = 0
 
     if (!options?.swappedContent) {
@@ -170,17 +227,25 @@ export class KirikiriLayer extends Container {
     const page = this[data.page]
 
     if (data.x !== undefined)
-      page.x = this.renderer.SCALE * ((this.margins?.left ?? 0) + data.x)
+      page.x = this.renderer.SCALE * data.x
     if (data.y !== undefined)
-      page.y = this.renderer.SCALE * ((this.margins?.top ?? 0) + data.y)
+      page.y = this.renderer.SCALE * data.y
     if (data.opacity !== undefined)
       page.alpha = data.opacity
     if (data.visible !== undefined)
       page.visible = data.visible
-    if (data.width !== undefined)
+    if (data.width !== undefined) {
       page.width = this.renderer.SCALE * data.width
-    if (data.height !== undefined)
+      this.pageMetrics[data.page].width = data.width
+    }
+    if (data.height !== undefined) {
       page.height = this.renderer.SCALE * data.height
+      this.pageMetrics[data.page].height = data.height
+    }
+  }
+
+  getPageMetrics(page: 'back' | 'fore') {
+    return this.pageMetrics[page]
   }
 
   setLayerAttributes(data: {
@@ -298,6 +363,8 @@ export class KirikiriLayer extends Container {
    * Copies all children properties from the front layer to the back layer.
    */
   copyFrontToBack() {
+    this.back.removeChildren()
+
     const data = {
       position: this.fore.position,
       scale: this.fore.scale,
@@ -314,12 +381,14 @@ export class KirikiriLayer extends Container {
     this.fore.children.forEach((child) => {
       if (child instanceof Sprite) {
         const newChild = new Sprite(child.texture)
+        const childMetadata = child as Sprite & KirikiriLayerChildMetadata
 
         const data = {
           label: child.label,
           position: child.position,
           scale: child.scale,
           rotation: child.rotation,
+          alpha: child.alpha,
           visible: child.visible,
           pivot: child.pivot,
           x: child.x,
@@ -329,6 +398,8 @@ export class KirikiriLayer extends Container {
         }
 
         Object.assign(newChild, data)
+        ;(newChild as Sprite & KirikiriLayerChildMetadata).__kirikiriStorage = childMetadata.__kirikiriStorage
+        ;(newChild as Sprite & KirikiriLayerChildMetadata).__kirikiriInteraction = childMetadata.__kirikiriInteraction
 
         this.back.addChild(newChild)
       }
@@ -356,5 +427,43 @@ export class KirikiriLayer extends Container {
     }
 
     return true
+  }
+
+  private applyTransitionProfile(profile: TransitionProfile, progress: number, mask?: Graphics) {
+    if (mask && ['wipe', 'circle', 'blinds', 'wave'].includes(profile.kind)) {
+      createTransitionMask(profile, mask, progress, this.renderer.renderedWidth, this.renderer.renderedHeight)
+      return
+    }
+
+    const eased = this.smoothstep(progress)
+    const centerX = this.renderer.renderedWidth / 2
+    const centerY = this.renderer.renderedHeight / 2
+    this.fore.pivot.set(centerX, centerY)
+    this.fore.x = centerX
+    this.fore.y = centerY
+
+    switch (profile.kind) {
+      case 'mosaic':
+        this.fore.alpha = 1 - Math.ceil(eased * 8) / 8
+        break
+      case 'rotatezoom':
+        this.fore.alpha = 1 - eased
+        this.fore.rotation = eased * Math.PI * 0.25
+        this.fore.scale.set(1 + eased * 0.5)
+        break
+      case 'rotatevanish':
+        this.fore.alpha = 1 - eased
+        this.fore.rotation = eased * Math.PI * 0.5
+        this.fore.scale.set(Math.max(0.1, 1 - eased))
+        break
+      case 'rotateswap':
+        this.fore.alpha = 1 - eased
+        this.fore.rotation = eased * Math.PI
+        this.fore.scale.set(Math.max(0.1, 1 - eased * 0.3), 1)
+        break
+      default:
+        this.fore.alpha = 1 - eased
+        break
+    }
   }
 }

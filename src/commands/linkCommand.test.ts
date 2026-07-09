@@ -55,7 +55,13 @@ describe('linkCommand', () => {
       shadow: 'no',
       size: 20,
     })
-    expect(addLink).toHaveBeenCalledWith('戻る', expect.any(Function))
+    expect(addLink).toHaveBeenCalledWith('戻る', expect.any(Function), expect.objectContaining({
+      interaction: {
+        type: 'link',
+        target: '*back',
+        storage: undefined,
+      },
+    }))
     expect(setFont).toHaveBeenLastCalledWith({
       color: 'default',
       shadow: 'default',

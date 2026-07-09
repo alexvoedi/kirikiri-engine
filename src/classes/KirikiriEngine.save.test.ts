@@ -1,5 +1,5 @@
 import type { KirikiriSaveGame } from '../types/KirikiriSaveGame'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { EngineState } from '../enums/EngineState'
 import { setupEngine } from '../testSetup'
 
@@ -12,6 +12,14 @@ function mockRestorableFiles(engine: Awaited<ReturnType<typeof setupEngine>>) {
 }
 
 describe('kirikiriEngine save games', () => {
+  beforeEach(() => {
+    globalThis.localStorage.clear()
+  })
+
+  afterEach(() => {
+    globalThis.localStorage.clear()
+  })
+
   it('creates a serializable save game snapshot', async () => {
     const engine = await setupEngine()
     const cleanup = vi.fn()
@@ -27,6 +35,8 @@ describe('kirikiriEngine save games', () => {
       audio,
       cleanup,
       playing: true,
+      storage: 'bgm01.ogg',
+      loop: true,
     }
     engine.callstack.push({
       file: 'first',
@@ -51,6 +61,8 @@ describe('kirikiriEngine save games', () => {
     })
     expect(saveGame.commandStorage.playbgm).toStrictEqual({
       playing: true,
+      storage: 'bgm01.ogg',
+      loop: true,
     })
   })
 
@@ -162,5 +174,74 @@ describe('kirikiriEngine save games', () => {
     await restored.macros.setclear({})
 
     expect(restored.globalScriptContext.sf.firstclear).toBe(42)
+  })
+
+  it('creates, lists, loads, and deletes named snapshots', async () => {
+    const engine = await setupEngine()
+    engine.setState(EngineState.PAUSED)
+    engine.globalScriptContext.sf.firstclear = 23
+    engine.callstack.push({
+      file: 'first',
+      lines: ['Visible preview text', '[s]'],
+      index: 0,
+    })
+
+    const snapshot = engine.createSnapshot('Chapter 1')
+
+    expect(snapshot.kind).toBe('snapshot')
+    expect(snapshot.title).toBe('Chapter 1')
+    expect(snapshot.preview).toBe('Visible preview text')
+    expect(snapshot.saveGame.globalScriptContext.sf.firstclear).toBe(23)
+
+    expect(engine.listSnapshots()).toHaveLength(1)
+    expect(engine.listSnapshots()[0]).toMatchObject({
+      kind: 'snapshot',
+      id: snapshot.id,
+      title: 'Chapter 1',
+      preview: 'Visible preview text',
+      saveGame: {
+        globalScriptContext: {
+          sf: {
+            firstclear: 23,
+          },
+        },
+      },
+    })
+
+    const restored = await setupEngine()
+    mockRestorableFiles(restored)
+
+    const loaded = await restored.loadSnapshot(snapshot.id, {
+      resume: false,
+    })
+
+    expect(loaded.id).toBe(snapshot.id)
+    expect(restored.globalScriptContext.sf.firstclear).toBe(23)
+    expect(restored.callstack.current.index).toBe(0)
+    expect(restored.getState()).toBe(EngineState.PAUSED)
+
+    restored.deleteSnapshot(snapshot.id)
+    expect(restored.listSnapshots()).toStrictEqual([])
+  })
+
+  it('resumes execution after loading a snapshot by default', async () => {
+    const engine = await setupEngine()
+    engine.setState(EngineState.PAUSED)
+    engine.callstack.push({
+      file: 'first',
+      lines: ['*start', '[s]'],
+      index: 1,
+    })
+
+    const snapshot = engine.createSnapshot('Resume point')
+
+    const restored = await setupEngine()
+    mockRestorableFiles(restored)
+    const run = vi.spyOn(restored, 'run').mockResolvedValue()
+
+    await restored.loadSnapshot(snapshot.id)
+
+    expect(restored.getState()).toBe(EngineState.RUNNING)
+    expect(run).toHaveBeenCalledOnce()
   })
 })

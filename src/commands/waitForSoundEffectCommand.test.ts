@@ -21,4 +21,41 @@ describe('waitForSoundEffectCommand', () => {
 
     await expect(promise).resolves.toBeUndefined()
   })
+
+  it('waits for the matching sound effect buffer', async () => {
+    const engine = await setupEngine()
+    engine.commandStorage.playse = {
+      byBuffer: {
+        2: {
+          playing: true,
+        },
+      },
+    }
+
+    const promise = waitForSoundEffectCommand(engine, {
+      buf: '2',
+    })
+
+    globalThis.dispatchEvent(new CustomEvent(EngineEvent.SOUND_EFFECT_ENDED, {
+      detail: {
+        buf: '1',
+      },
+    }))
+
+    let resolved = false
+    void promise.then(() => {
+      resolved = true
+    })
+
+    await Promise.resolve()
+    expect(resolved).toBe(false)
+
+    globalThis.dispatchEvent(new CustomEvent(EngineEvent.SOUND_EFFECT_ENDED, {
+      detail: {
+        buf: '2',
+      },
+    }))
+
+    await expect(promise).resolves.toBeUndefined()
+  })
 })

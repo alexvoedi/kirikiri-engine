@@ -39,7 +39,13 @@ describe('kirikiriEngine', () => {
 
     await engine.processText()
 
-    expect(addLink).toHaveBeenCalledWith('０１．プロローグ', expect.any(Function))
+    expect(addLink).toHaveBeenCalledWith('０１．プロローグ', expect.any(Function), expect.objectContaining({
+      interaction: {
+        type: 'link',
+        target: '*s1',
+        storage: undefined,
+      },
+    }))
     expect(loggerError).not.toHaveBeenCalled()
   })
 
@@ -58,7 +64,13 @@ describe('kirikiriEngine', () => {
 
     await (engine as unknown as { processCurrentLine: () => Promise<void> }).processCurrentLine()
 
-    expect(addLink).toHaveBeenCalledWith('０１．プロローグ　　　　　　　　　　　　　　', expect.any(Function))
+    expect(addLink).toHaveBeenCalledWith('０１．プロローグ　　　　　　　　　　　　　　', expect.any(Function), expect.objectContaining({
+      interaction: {
+        type: 'link',
+        target: '*s1',
+        storage: undefined,
+      },
+    }))
     expect(loggerError).not.toHaveBeenCalled()
     expect(engine.callstack.current.index).toBe(1)
   })
@@ -174,5 +186,39 @@ describe('kirikiriEngine', () => {
     expect(addedClickListener).toBeDefined()
     expect(removedClickListener).toBeDefined()
     expect(removedClickListener?.[1]).toBe(addedClickListener?.[1])
+  })
+
+  it('skips regular commands when a cond attribute evaluates to false', async () => {
+    const engine = await setupEngine()
+
+    engine.callstack.push({
+      file: 'first',
+      lines: [
+        '[history enabled=false cond="false"]',
+      ],
+      index: 0,
+    })
+
+    await (engine as unknown as { processCurrentLine: () => Promise<void> }).processCurrentLine()
+
+    expect(engine.commandStorage.history).toBeUndefined()
+    expect(engine.callstack.current.index).toBe(1)
+  })
+
+  it('skips inline block commands when a cond attribute evaluates to false', async () => {
+    const engine = await setupEngine()
+    const addLink = vi.spyOn(engine.renderer, 'addLink').mockImplementation(() => {})
+
+    engine.callstack.push({
+      file: 'first',
+      lines: [
+        '[link target=*s1 cond="false"]hidden[endlink]',
+      ],
+      index: 0,
+    })
+
+    await engine.processText()
+
+    expect(addLink).not.toHaveBeenCalled()
   })
 })

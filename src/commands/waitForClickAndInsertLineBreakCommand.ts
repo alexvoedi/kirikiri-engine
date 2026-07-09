@@ -11,10 +11,6 @@ const schema = z.object({}).strict()
 export async function waitForClickAndInsertLineBreakCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   schema.parse(props)
 
-  return new Promise((resolve) => {
-    globalThis.addEventListener('click', async () => {
-      await engine.addCharacter('\n')
-      resolve()
-    }, { once: true })
-  })
+  await engine.waitForGameClick()
+  await engine.addCharacter('\n')
 }

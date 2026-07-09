@@ -1,5 +1,6 @@
 import type { KirikiriEngine } from '../classes/KirikiriEngine'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
+import { bgmOptionCommand } from './bgmOptionCommand'
 import { buttonCommand } from './buttonCommand'
 import { callCommand } from './callCommand'
 import { changeLayerCountCommand } from './changeLayerCountCommand'
@@ -11,7 +12,10 @@ import { delayCommand } from './delayCommand'
 import { deleteMessageLayerChildrenCommand } from './deleteMessageLayerChildrenCommand'
 import { embeddedTagCommand } from './embeddedTagCommand'
 import { evalCommand } from './evalCommand'
+import { fadeInSoundEffectCommand } from './fadeInSoundEffectCommand'
 import { fadeOutBackgroundMusicCommand } from './fadeOutBackgroundMusic'
+import { fadeOutSoundEffectCommand } from './fadeOutSoundEffectCommand'
+import { fgZoomCommand } from './fgZoomCommand'
 import { fontCommand } from './fontCommand'
 import { historyCommand } from './historyCommand'
 import { imageCommand } from './imageCommand'
@@ -31,10 +35,12 @@ import { resumeBackgroundMusicCommand } from './resumeBackgroundMusicCommand'
 import { returnCommand } from './returnCommand'
 import { rightClickCommand } from './rightClickCommand'
 import { scenarioExitCommand } from './scenarioExitCommand'
+import { seOptionCommand } from './seOptionCommand'
 import { startanchorCommand } from './startanchorCommand'
 import { stopBackgroundMusicCommand } from './stopBackgroundMusicCommand'
 import { stopSoundEffectCommand } from './stopSoundEffectCommand'
 import { stopTransitionCommand } from './stopTransitionCommand'
+import { stopVideoCommand } from './stopVideoCommand'
 import { storePositionCommand } from './storePositionCommand'
 import { styleCommand } from './styleCommand'
 import { transitionCommand } from './transitionCommand'
@@ -43,13 +49,16 @@ import { waitCommand } from './waitCommand'
 import { waitForBackgroundMusicCommand } from './waitForBackgroundMusicCommand'
 import { waitForClickAndInsertLineBreakCommand } from './waitForClickAndInsertLineBreakCommand'
 import { waitForClickCommand } from './waitForClickCommand'
+import { waitForFgZoomCommand } from './waitForFgZoomCommand'
 import { waitForMoveCommand } from './waitForMoveCommand'
 import { waitForSoundEffectCommand } from './waitForSoundEffectCommand'
 import { waitForTextClickWithPageBreakCommand } from './waitForTextClickWithPageBreakCommand'
 import { waitForTransitionCommand } from './waitForTransitionCommand'
+import { waitForVideoCommand } from './waitForVideoCommand'
 
 const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string, string>) => Promise<void>> = {
   image: imageCommand,
+  bgmopt: bgmOptionCommand,
   position: positionCommand,
   trans: transitionCommand,
   wt: waitForTransitionCommand,
@@ -80,15 +89,17 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   call: callCommand,
   return: returnCommand,
   loadplugin: loadPluginCommand,
-  fgzoom: async () => { /* TODO: find out what this does */ },
-  wfgzoom: async () => { /* TODO: find out what this does */ },
+  fgzoom: fgZoomCommand,
+  wfgzoom: waitForFgZoomCommand,
   fadeinbgm: playBackgroundMusicCommand,
   playbgm: playBackgroundMusicCommand,
+  fadeinse: fadeInSoundEffectCommand,
   rclick: rightClickCommand,
   wl: waitForBackgroundMusicCommand,
   stopbgm: stopBackgroundMusicCommand,
   wm: waitForMoveCommand,
   fadeoutbgm: fadeOutBackgroundMusicCommand,
+  fadeoutse: fadeOutSoundEffectCommand,
   video: videoCommand,
   playvideo: playVideoCommand,
   er: deleteMessageLayerChildrenCommand,
@@ -99,6 +110,9 @@ const commandMap: Record<string, (engine: KirikiriEngine, props?: Record<string,
   resumebgm: resumeBackgroundMusicCommand,
   quake: quakeCommand,
   clickskip: clickSkipCommand,
+  seopt: seOptionCommand,
+  wv: waitForVideoCommand,
+  stopvideo: stopVideoCommand,
   gvolmenu: async () => { /* Plugin-provided volume menu command. */ },
 }
 

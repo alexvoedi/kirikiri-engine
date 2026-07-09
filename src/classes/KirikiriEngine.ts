@@ -2,18 +2,22 @@ import type { ConsolaInstance } from 'consola'
 import type { CommandStorage } from '../types/CommandStorage'
 import type { Game } from '../types/Game'
 import type { KirikiriEngineOptions } from '../types/KirikiriEngineOptions'
-import type { JsonValue, KirikiriSaveGame } from '../types/KirikiriSaveGame'
+import type { JsonValue, KirikiriInteractionSnapshot, KirikiriSaveGame, KirikiriStoredSaveEntry } from '../types/KirikiriSaveGame'
 import type { StorageProvider } from '../types/StorageProvider'
 import { createConsola } from 'consola'
+import { evalCommand } from '../commands/evalCommand'
 import { getCommand } from '../commands/getCommand'
 import { ifCommand } from '../commands/ifCommand'
+import { jumpCommand } from '../commands/jumpCommand'
 import { linkCommand } from '../commands/linkCommand'
 import { createMacro } from '../commands/macroCommand'
+import { playBackgroundMusicCommand } from '../commands/playBackgroundMusicCommand'
 import { scriptCommand } from '../commands/scriptCommand'
 import { COMMAND_BLOCKS, EngineEvent, GLOBAL_SCRIPT_CONTEXT } from '../constants'
 import { EngineState } from '../enums/EngineState'
 import { UnknownCommandError } from '../errors/UnknownCommandError'
 import { createStorageProvider } from '../storage/createStorageProvider'
+import { checkCondition } from '../utils/checkCondition'
 import { checkIsBlockCommand } from '../utils/checkIsBlockCommand'
 import { extractBlockCommand } from '../utils/extractBlockCommand'
 import { extractCommand } from '../utils/extractCommand'
@@ -56,10 +60,21 @@ export class KirikiriEngine {
    */
   readonly macros: Record<string, (props: Record<string, string>) => Promise<void>> = {}
 
+  private gameplayClickBridgeInstalled = false
+
   private readonly macroDefinitions = new Map<string, {
     lines: string[]
     props: Record<string, JsonValue>
   }>()
+
+  private executionCheckpoint?: {
+    file: string
+    lineIndex: number
+    textOffset: number
+  }
+
+  private systemMenuElement?: HTMLDivElement
+  private systemMenuResumeState?: EngineState
 
   /**
    * Subroutine call stack
@@ -128,6 +143,8 @@ export class KirikiriEngine {
    */
   async init() {
     await this.renderer.init()
+    this.installGameplayClickBridge()
+    this.installSystemMenu()
 
     this.state = EngineState.INITIALIZED
   }
@@ -176,6 +193,10 @@ export class KirikiriEngine {
         lines: [...definition.lines],
         props: { ...definition.props },
       })),
+      renderer: this.renderer.createSnapshot(),
+      executionCheckpoint: this.executionCheckpoint && {
+        ...this.executionCheckpoint,
+      },
     }
   }
 
@@ -194,7 +215,13 @@ export class KirikiriEngine {
     }
 
     this.globalScriptContext.kag.clickCount = saveGame.globalScriptContext.kag.clickCount
+    this.cleanupRuntimeState()
     this.replaceObject(this.commandStorage, saveGame.commandStorage)
+    this.executionCheckpoint = saveGame.executionCheckpoint
+      ? {
+          ...saveGame.executionCheckpoint,
+        }
+      : undefined
 
     this.clearMacros()
     for (const macro of saveGame.macros) {
@@ -208,31 +235,110 @@ export class KirikiriEngine {
       this.callstack.push(entry)
     }
 
+    if (saveGame.renderer) {
+      await this.renderer.restoreSnapshot(saveGame.renderer, {
+        createInteractionHandler: interaction => this.createInteractionHandler(interaction),
+        resolveStorage: storage => this.getAssetUrl(storage),
+      })
+    }
+
+    await this.restoreRuntimeState()
     this.state = saveGame.state
   }
 
   saveGame(slot: string | number): KirikiriSaveGame {
     const saveGame = this.createSaveGame()
-    this.getStorage().setItem(this.getSaveGameStorageKey(slot), JSON.stringify(saveGame))
+    const entry = this.createStoredSaveEntry('slot', String(slot), saveGame)
+    this.getStorage().setItem(this.getSaveGameStorageKey(slot), JSON.stringify(entry))
 
     return saveGame
   }
 
-  async loadSaveGame(slot: string | number): Promise<KirikiriSaveGame> {
+  async loadSaveGame(slot: string | number, options?: {
+    resume?: boolean
+  }): Promise<KirikiriSaveGame> {
     const serialized = this.getStorage().getItem(this.getSaveGameStorageKey(slot))
 
     if (!serialized) {
       throw new Error(`Save game slot ${slot} not found`)
     }
 
-    const saveGame = JSON.parse(serialized) as KirikiriSaveGame
+    const parsed = JSON.parse(serialized) as KirikiriSaveGame | KirikiriStoredSaveEntry
+    const saveGame = this.extractSaveGame(parsed)
     await this.restoreSaveGame(saveGame)
+    if (options?.resume) {
+      await this.resumeAfterRestore(saveGame)
+    }
 
     return saveGame
   }
 
   deleteSaveGame(slot: string | number): void {
     this.getStorage().removeItem(this.getSaveGameStorageKey(slot))
+  }
+
+  createSnapshot(name?: string): KirikiriStoredSaveEntry {
+    const saveGame = this.createSaveGame()
+    const createdAt = saveGame.createdAt
+    const id = `${Date.now()}`
+    const entry = this.createStoredSaveEntry('snapshot', id, saveGame, {
+      title: name?.trim() || new Date(createdAt).toLocaleString(),
+    })
+
+    this.getStorage().setItem(this.getSnapshotStorageKey(id), JSON.stringify(entry))
+
+    return entry
+  }
+
+  async loadSnapshot(id: string, options?: {
+    resume?: boolean
+  }): Promise<KirikiriStoredSaveEntry> {
+    const serialized = this.getStorage().getItem(this.getSnapshotStorageKey(id))
+
+    if (!serialized) {
+      throw new Error(`Snapshot ${id} not found`)
+    }
+
+    const entry = JSON.parse(serialized) as KirikiriStoredSaveEntry
+    await this.restoreSaveGame(entry.saveGame)
+
+    if (options?.resume ?? true) {
+      await this.resumeAfterRestore(entry.saveGame)
+    }
+
+    return entry
+  }
+
+  deleteSnapshot(id: string): void {
+    this.getStorage().removeItem(this.getSnapshotStorageKey(id))
+  }
+
+  listSnapshots(): KirikiriStoredSaveEntry[] {
+    return this.listStoredEntries('snapshot')
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  }
+
+  listSaveGames(slots = 8): Array<KirikiriStoredSaveEntry | null> {
+    const result: Array<KirikiriStoredSaveEntry | null> = []
+
+    for (let index = 1; index <= slots; index += 1) {
+      const serialized = this.getStorage().getItem(this.getSaveGameStorageKey(index))
+
+      if (!serialized) {
+        result.push(null)
+        continue
+      }
+
+      const parsed = JSON.parse(serialized) as KirikiriSaveGame | KirikiriStoredSaveEntry
+      if ('saveGame' in parsed) {
+        result.push(parsed)
+      }
+      else {
+        result.push(this.createStoredSaveEntry('slot', String(index), parsed))
+      }
+    }
+
+    return result
   }
 
   /**
@@ -466,7 +572,13 @@ export class KirikiriEngine {
         }
 
         default: {
-          await this.processText()
+          const resumeOffset = this.executionCheckpoint?.file === this.callstack.current.file
+            && this.executionCheckpoint.lineIndex === this.callstack.current.index
+            ? this.executionCheckpoint.textOffset
+            : 0
+
+          await this.processText(resumeOffset)
+          this.executionCheckpoint = undefined
 
           this.callstack.current.index += 1
 
@@ -485,6 +597,10 @@ export class KirikiriEngine {
     this.logger.debug(`Processing line ${this.callstack.current.index + 1}: ${this.callstack.currentLine}`)
 
     try {
+      if (!await this.shouldExecuteCommand(command, props)) {
+        return
+      }
+
       const macro = this.macros[command]
       if (macro) {
         await macro(props)
@@ -522,6 +638,15 @@ export class KirikiriEngine {
   }> {
     const startLine = this.callstack.current.index
     const { content, to } = extractBlockCommand(command, this.callstack.current.lines.slice(startLine), column)
+
+    if (!await this.shouldExecuteCommand(command, props)) {
+      this.callstack.current.index = startLine + to.line
+
+      return {
+        line: startLine + to.line,
+        col: to.col,
+      }
+    }
 
     switch (command) {
       case 'macro': {
@@ -570,7 +695,7 @@ export class KirikiriEngine {
   /**
    * Process text.
    */
-  async processText() {
+  async processText(startOffset = 0) {
     const text = this.callstack.currentLine
 
     let skip = false
@@ -583,11 +708,16 @@ export class KirikiriEngine {
       globalThis.addEventListener(EngineEvent.CLICK, onClick, { once: true })
     }
 
-    let index = 0
+    let index = startOffset
     while (index < text.length) {
       const character = text.charAt(index)
 
       if (character !== '[') {
+        this.executionCheckpoint = {
+          file: this.callstack.current.file,
+          lineIndex: this.callstack.current.index,
+          textOffset: index + 1,
+        }
         await this.addCharacter(character, { skip })
 
         index += 1
@@ -613,10 +743,24 @@ export class KirikiriEngine {
             break
           }
           case 'r': {
+            this.executionCheckpoint = {
+              file: this.callstack.current.file,
+              lineIndex: this.callstack.current.index,
+              textOffset: nextIndex,
+            }
             await this.addCharacter('\n', { skip })
             break
           }
           default: {
+            if (!await this.shouldExecuteCommand(command, props)) {
+              if (checkIsBlockCommand(command)) {
+                const block = extractBlockCommand(command, [text], index)
+                nextIndex = block.to.col + 1
+              }
+
+              break
+            }
+
             const macro = this.macros[command]
             if (macro) {
               await macro(props)
@@ -645,6 +789,11 @@ export class KirikiriEngine {
               const commandFunction = getCommand(command)
 
               if (commandFunction) {
+                this.executionCheckpoint = {
+                  file: this.callstack.current.file,
+                  lineIndex: this.callstack.current.index,
+                  textOffset: index,
+                }
                 await commandFunction(this, props)
               }
               else {
@@ -687,6 +836,22 @@ export class KirikiriEngine {
     this.logger.debug(`Engine state changed to: ${state}`)
   }
 
+  waitForGameClick(options?: {
+    countClick?: boolean
+  }) {
+    return new Promise<void>((resolve) => {
+      const onClick = () => {
+        if (options?.countClick) {
+          this.globalScriptContext.kag.clickCount += 1
+        }
+
+        resolve()
+      }
+
+      this.canvas.addEventListener('click', onClick, { once: true })
+    })
+  }
+
   private registerMacro(name: string, lines: string[], props: Record<string, unknown>) {
     const normalizedProps = this.toJsonObject(props)
     const { macro } = createMacro(this, lines, {
@@ -720,6 +885,22 @@ export class KirikiriEngine {
 
   private getSaveGameStorageKey(slot: string | number) {
     return `kirikiri-engine:${this.game.root}:${this.game.entry}:save:${slot}`
+  }
+
+  private getSnapshotStorageKey(id: string) {
+    return `kirikiri-engine:${this.game.root}:${this.game.entry}:snapshot:${id}`
+  }
+
+  private async shouldExecuteCommand(command: string, props: Record<string, string>) {
+    if (!props.cond) {
+      return true
+    }
+
+    if (['macro', 'if', 'iscript'].includes(command)) {
+      return true
+    }
+
+    return await checkCondition(this, props.cond)
   }
 
   private replaceObject(target: object, source: Record<string, JsonValue>) {
@@ -767,4 +948,298 @@ export class KirikiriEngine {
 
     return undefined
   }
+
+  private async restoreRuntimeState() {
+    const bgm = this.commandStorage.playbgm as Record<string, JsonValue> | undefined
+
+    if (bgm?.storage && bgm.playing) {
+      await playBackgroundMusicCommand(this, {
+        storage: String(bgm.storage),
+        loop: String(bgm.loop ?? true),
+      })
+    }
+  }
+
+  private cleanupRuntimeState() {
+    this.commandStorage.playbgm?.cleanup?.()
+    this.commandStorage.playse?.cleanup?.()
+    this.commandStorage.video?.cleanup?.()
+  }
+
+  private extractSaveGame(value: KirikiriSaveGame | KirikiriStoredSaveEntry) {
+    return 'saveGame' in value ? value.saveGame : value
+  }
+
+  private createStoredSaveEntry(kind: 'slot' | 'snapshot', id: string, saveGame: KirikiriSaveGame, overrides?: {
+    title?: string
+  }): KirikiriStoredSaveEntry {
+    return {
+      version: 1,
+      kind,
+      id,
+      createdAt: saveGame.createdAt,
+      title: overrides?.title ?? `${kind === 'slot' ? `Slot ${id}` : 'Snapshot'} ${id}`,
+      preview: this.getSavePreview(),
+      saveGame,
+    }
+  }
+
+  private getSavePreview() {
+    const currentLine = this.callstack.currentLine ?? ''
+    const normalized = currentLine
+      .replace(/\[[^\]]+\]/g, '')
+      .replace(/^[;*\\@]+/, '')
+      .trim()
+
+    if (normalized) {
+      return normalized.slice(0, 80)
+    }
+
+    return `${this.callstack.current?.file ?? 'unknown'}:${(this.callstack.current?.index ?? 0) + 1}`
+  }
+
+  private listStoredEntries(kind: 'slot' | 'snapshot') {
+    const prefix = `kirikiri-engine:${this.game.root}:${this.game.entry}:${kind}:`
+    const entries: KirikiriStoredSaveEntry[] = []
+
+    for (let index = 0; index < this.getStorage().length; index += 1) {
+      const key = this.getStorage().key(index)
+
+      if (!key || !key.startsWith(prefix)) {
+        continue
+      }
+
+      const serialized = this.getStorage().getItem(key)
+      if (!serialized) {
+        continue
+      }
+
+      const parsed = JSON.parse(serialized) as KirikiriStoredSaveEntry
+      if ('saveGame' in parsed) {
+        entries.push(parsed)
+      }
+    }
+
+    return entries
+  }
+
+  private async resumeAfterRestore(saveGame: KirikiriSaveGame) {
+    if (saveGame.state === EngineState.STOPPED) {
+      return
+    }
+
+    this.setState(EngineState.RUNNING)
+    await this.run()
+  }
+
+  private createInteractionHandler(interaction: KirikiriInteractionSnapshot) {
+    return async () => {
+      if (interaction.exp) {
+        await evalCommand(this, {
+          exp: interaction.exp,
+        })
+      }
+
+      if (interaction.target || interaction.storage) {
+        if (interaction.type === 'link') {
+          globalThis.dispatchEvent(new CustomEvent(EngineEvent.CHOICE))
+        }
+
+        const jumpProps: Record<string, string> = {}
+        if (interaction.target) {
+          jumpProps.target = interaction.target
+        }
+        if (interaction.storage) {
+          jumpProps.storage = interaction.storage
+        }
+
+        await jumpCommand(this, jumpProps)
+      }
+
+      this.setState(EngineState.RUNNING)
+      await this.run()
+    }
+  }
+
+  private installSystemMenu() {
+    if (typeof document === 'undefined' || this.systemMenuElement) {
+      return
+    }
+
+    const menu = document.createElement('div')
+    menu.style.position = 'fixed'
+    menu.style.zIndex = '10001'
+    menu.style.display = 'none'
+    menu.style.minWidth = '360px'
+    menu.style.maxWidth = 'min(92vw, 520px)'
+    menu.style.maxHeight = '80vh'
+    menu.style.overflow = 'auto'
+    menu.style.padding = '12px'
+    menu.style.border = '1px solid rgba(255,255,255,0.18)'
+    menu.style.background = 'rgba(18,18,18,0.96)'
+    menu.style.color = '#f5f5f5'
+    menu.style.font = '12px/1.4 monospace'
+    menu.style.boxShadow = '0 16px 48px rgba(0,0,0,0.4)'
+    document.body.append(menu)
+    this.systemMenuElement = menu
+
+    this.canvas.addEventListener('contextmenu', (event) => {
+      if (this.commandStorage.rclick?.enabled === false) {
+        return
+      }
+
+      event.preventDefault()
+      void this.openSystemMenu(event.clientX, event.clientY)
+    })
+
+    document.addEventListener('click', (event) => {
+      if (!this.systemMenuElement || this.systemMenuElement.style.display === 'none') {
+        return
+      }
+
+      if (event.target instanceof Node && this.systemMenuElement.contains(event.target)) {
+        return
+      }
+
+      this.closeSystemMenu()
+    })
+  }
+
+  private installGameplayClickBridge() {
+    if (this.gameplayClickBridgeInstalled) {
+      return
+    }
+
+    this.canvas.addEventListener('click', () => {
+      globalThis.dispatchEvent(new CustomEvent(EngineEvent.CLICK))
+    })
+
+    this.gameplayClickBridgeInstalled = true
+  }
+
+  private async openSystemMenu(x: number, y: number) {
+    if (!this.systemMenuElement) {
+      return
+    }
+
+    this.systemMenuResumeState = this.state
+    this.setState(EngineState.PAUSED)
+    this.systemMenuElement.style.left = `${Math.max(8, x)}px`
+    this.systemMenuElement.style.top = `${Math.max(8, y)}px`
+    this.systemMenuElement.style.display = 'block'
+    this.renderSystemMenu()
+  }
+
+  private closeSystemMenu(options?: {
+    resume?: boolean
+  }) {
+    if (!this.systemMenuElement) {
+      return
+    }
+
+    this.systemMenuElement.style.display = 'none'
+    this.systemMenuElement.innerHTML = ''
+
+    if ((options?.resume ?? true) && this.systemMenuResumeState && this.systemMenuResumeState !== EngineState.STOPPED) {
+      this.setState(EngineState.RUNNING)
+    }
+
+    this.systemMenuResumeState = undefined
+  }
+
+  private renderSystemMenu() {
+    if (!this.systemMenuElement) {
+      return
+    }
+
+    const snapshots = this.listSnapshots()
+    const slots = this.listSaveGames()
+    const snapshotDefaultName = new Date().toLocaleString()
+
+    this.systemMenuElement.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <strong>System Menu</strong>
+        <button data-action="close" type="button">Resume</button>
+      </div>
+      <div style="margin-bottom:12px;">
+        <div style="margin-bottom:6px;"><strong>Save Slots</strong></div>
+        ${slots.map((entry, index) => `
+          <div style="display:grid;grid-template-columns:52px 1fr auto auto;gap:8px;align-items:center;margin-bottom:6px;">
+            <span>Slot ${index + 1}</span>
+            <span>${entry ? `${entry.title} | ${entry.preview}` : 'Empty'}</span>
+            <button data-action="save-slot" data-slot="${index + 1}" type="button">Save</button>
+            <button data-action="load-slot" data-slot="${index + 1}" type="button" ${entry ? '' : 'disabled'}>Load</button>
+          </div>
+        `).join('')}
+      </div>
+      <div>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">
+          <strong>Snapshots</strong>
+          <input data-action="snapshot-name" type="text" value="${escapeHtml(snapshotDefaultName)}" style="flex:1;min-width:0;" />
+          <button data-action="create-snapshot" type="button">Create</button>
+        </div>
+        ${snapshots.length > 0
+          ? snapshots.map(entry => `
+            <div style="display:grid;grid-template-columns:1fr auto auto;gap:8px;align-items:center;margin-bottom:6px;">
+              <span>${escapeHtml(entry.title)} | ${escapeHtml(entry.preview)}</span>
+              <button data-action="load-snapshot" data-id="${entry.id}" type="button">Load</button>
+              <button data-action="delete-snapshot" data-id="${entry.id}" type="button">Delete</button>
+            </div>
+          `).join('')
+          : '<div>No snapshots yet.</div>'}
+      </div>
+    `
+
+    this.systemMenuElement.querySelectorAll<HTMLButtonElement>('button[data-action]').forEach((button) => {
+      button.addEventListener('click', () => {
+        void this.handleSystemMenuAction(button.dataset.action, button.dataset.slot, button.dataset.id)
+      })
+    })
+  }
+
+  private async handleSystemMenuAction(action?: string, slot?: string, id?: string) {
+    switch (action) {
+      case 'close':
+        this.closeSystemMenu()
+        break
+      case 'save-slot':
+        if (slot) {
+          this.saveGame(slot)
+          this.renderSystemMenu()
+        }
+        break
+      case 'load-slot':
+        if (slot) {
+          this.closeSystemMenu({ resume: false })
+          await this.loadSaveGame(slot, { resume: true })
+        }
+        break
+      case 'create-snapshot': {
+        const input = this.systemMenuElement?.querySelector<HTMLInputElement>('input[data-action="snapshot-name"]')
+        this.createSnapshot(input?.value)
+        this.renderSystemMenu()
+        break
+      }
+      case 'load-snapshot':
+        if (id) {
+          this.closeSystemMenu({ resume: false })
+          await this.loadSnapshot(id, { resume: true })
+        }
+        break
+      case 'delete-snapshot':
+        if (id) {
+          this.deleteSnapshot(id)
+          this.renderSystemMenu()
+        }
+        break
+    }
+  }
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
 }

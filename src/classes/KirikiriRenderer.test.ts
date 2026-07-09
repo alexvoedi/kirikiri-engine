@@ -1,5 +1,6 @@
 import { Assets } from 'pixi.js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { appendCharacterWithKirikiriWrap } from '../utils/appendCharacterWithKirikiriWrap'
 import { KirikiriRenderer } from './KirikiriRenderer'
 
 describe('kirikiriRenderer', () => {
@@ -79,5 +80,44 @@ describe('kirikiriRenderer', () => {
     renderer.setStyle({ align: 'default' })
 
     expect(renderer.textStyle.align).toBeUndefined()
+  })
+
+  it('wraps before ordinary characters near the right edge', () => {
+    const result = appendCharacterWithKirikiriWrap({
+      text: 'abcd',
+      character: 'e',
+      firstLineWidth: 40,
+      wrappedLineWidth: 40,
+      reserveWidth: 10,
+      measureText: value => value.length * 10,
+    })
+
+    expect(result).toBe('abcd\ne')
+  })
+
+  it('keeps japanese closing punctuation on the current line', () => {
+    const result = appendCharacterWithKirikiriWrap({
+      text: 'abcd',
+      character: '。',
+      firstLineWidth: 40,
+      wrappedLineWidth: 40,
+      reserveWidth: 10,
+      measureText: value => value.length * 10,
+    })
+
+    expect(result).toBe('abcd。')
+  })
+
+  it('uses full message width after the first indented line wraps', () => {
+    const result = appendCharacterWithKirikiriWrap({
+      text: 'ab\ncd',
+      character: 'e',
+      firstLineWidth: 20,
+      wrappedLineWidth: 50,
+      reserveWidth: 10,
+      measureText: value => value.length * 10,
+    })
+
+    expect(result).toBe('ab\ncde')
   })
 })
