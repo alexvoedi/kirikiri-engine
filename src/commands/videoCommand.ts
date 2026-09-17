@@ -18,12 +18,6 @@ const schema = z.object({
  */
 export async function videoCommand(engine: KirikiriEngine, props?: Record<string, string>): Promise<void> {
   const parsed = schema.parse(props)
-  const displayScaleX = engine.canvas.clientWidth > 0
-    ? engine.canvas.clientWidth / engine.renderer.RESOLUTION.WIDTH
-    : engine.renderer.SCALE
-  const displayScaleY = engine.canvas.clientHeight > 0
-    ? engine.canvas.clientHeight / engine.renderer.RESOLUTION.HEIGHT
-    : engine.renderer.SCALE
 
   merge(engine.commandStorage, {
     video: parsed,
@@ -35,14 +29,22 @@ export async function videoCommand(engine: KirikiriEngine, props?: Record<string
     return
   }
 
+  const rect = engine.canvas.getBoundingClientRect()
+  const displayScaleX = rect.width > 0
+    ? rect.width / engine.renderer.RESOLUTION.WIDTH
+    : engine.renderer.SCALE
+  const displayScaleY = rect.height > 0
+    ? rect.height / engine.renderer.RESOLUTION.HEIGHT
+    : engine.renderer.SCALE
+
   element.style.display = parsed.visible === false ? 'none' : 'block'
 
   if (parsed.left !== undefined) {
-    element.style.left = `${parsed.left * displayScaleX}px`
+    element.style.left = `${rect.left + (parsed.left * displayScaleX)}px`
   }
 
   if (parsed.top !== undefined) {
-    element.style.top = `${parsed.top * displayScaleY}px`
+    element.style.top = `${rect.top + (parsed.top * displayScaleY)}px`
   }
 
   if (parsed.width !== undefined) {

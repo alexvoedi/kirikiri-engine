@@ -136,6 +136,40 @@ describe('xp3StorageProvider', () => {
     expect(imageUrl.startsWith('blob:')).toBe(true)
     expect(fetchMock).toHaveBeenCalledTimes(2)
   })
+
+  it('assigns the correct mime type for mpg video assets', async () => {
+    const fetchMock = vi.fn(async (input: string | URL) => {
+      const url = String(input)
+      const archiveName = url.substring(url.lastIndexOf('/') + 1)
+
+      if (archiveName !== 'video.xp3') {
+        return new Response(null, {
+          status: 404,
+          statusText: 'Not Found',
+        })
+      }
+
+      return new Response(createXp3Archive([
+        {
+          name: 'movie.mpg',
+          bytes: new Uint8Array([0x00, 0x00, 0x01, 0xBA]),
+        },
+      ]))
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const createObjectURL = vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:movie')
+
+    const provider = new Xp3StorageProvider({
+      root: 'https://example.com/game',
+      archives: ['video.xp3'],
+    })
+
+    const url = await provider.resolveAssetUrl('movie.mpg')
+    const blob = createObjectURL.mock.calls[0]?.[0] as Blob
+
+    expect(url).toBe('blob:movie')
+    expect(blob.type).toBe('video/mpeg')
+  })
 })
 
 function createXp3Archive(entries: Array<{

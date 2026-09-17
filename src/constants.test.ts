@@ -62,6 +62,7 @@ describe('global_script_context', () => {
 
   it('should have default values for sf', () => {
     expect(GLOBAL_SCRIPT_CONTEXT.sf.firstclear).toBe(0)
+    expect(GLOBAL_SCRIPT_CONTEXT.sf.m_skip).toBe(0)
   })
 
   it('should have default values for f', () => {

@@ -16,9 +16,10 @@ export async function waitForVideoCommand(engine: KirikiriEngine, props?: Record
   const parsed = schema.parse(props)
 
   const playing = engine.commandStorage.video?.playing ?? false
+  const pending = engine.commandStorage.video?.pending ?? false
 
   return new Promise((resolve) => {
-    if (!playing) {
+    if (!playing && !pending) {
       resolve()
       return
     }

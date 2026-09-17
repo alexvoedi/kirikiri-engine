@@ -50,6 +50,7 @@ export const GLOBAL_SCRIPT_CONTEXT = {
   },
   sf: {
     firstclear: 0,
+    m_skip: 0,
   },
   f: {
     testmode: 0,

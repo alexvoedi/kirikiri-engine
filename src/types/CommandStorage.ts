@@ -46,6 +46,7 @@ export interface CommandStorage {
     element?: HTMLVideoElement
     cleanup?: () => void
     playing?: boolean
+    pending?: boolean
   }
   resetWait?: {
     timestamp?: number

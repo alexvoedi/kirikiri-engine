@@ -227,10 +227,28 @@ const gameStorage: StorageProvider = devmenu
         return storage.readBinaryFile(filename)
       },
       resolveAssetUrl(filename) {
+        if (/\.(mpg|mpeg|mp4|webm)$/i.test(filename)) {
+          return Promise.resolve(`${location.origin}/__xp3_video__/${filename}`)
+        }
+
         return storage.resolveAssetUrl(filename)
       },
     }
-  : storage
+  : {
+      readTextFile(filename, encoding) {
+        return storage.readTextFile(filename, encoding)
+      },
+      readBinaryFile(filename) {
+        return storage.readBinaryFile(filename)
+      },
+      resolveAssetUrl(filename) {
+        if (/\.(mpg|mpeg|mp4|webm)$/i.test(filename)) {
+          return Promise.resolve(`${location.origin}/__xp3_video__/${filename}`)
+        }
+
+        return storage.resolveAssetUrl(filename)
+      },
+    }
 
 const modeTools = document.createElement('div')
 modeTools.style.padding = '10px 12px'

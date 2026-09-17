@@ -22,6 +22,19 @@ describe('waitForVideoCommand', () => {
     await expect(promise).resolves.toBeUndefined()
   })
 
+  it('waits while video startup is still pending', async () => {
+    const engine = await setupEngine()
+    engine.commandStorage.video = {
+      pending: true,
+      playing: true,
+    }
+
+    const promise = waitForVideoCommand(engine, {})
+    globalThis.dispatchEvent(new CustomEvent(EngineEvent.VIDEO_ENDED))
+
+    await expect(promise).resolves.toBeUndefined()
+  })
+
   it('allows click-to-skip when canskip is enabled', async () => {
     const engine = await setupEngine()
     engine.commandStorage.video = {
