@@ -544,9 +544,21 @@ export class KirikiriEngine {
           else if (checkIsBlockCommand(command)) {
             const block = extractBlockCommand(command, this.callstack.current.lines.slice(startLine), column)
 
-            if (command === 'if' && block.to.line === 0) {
+            if (command === 'if') {
               const shouldProcessContent = await ifCommand(this, block.content, props)
-              column = shouldProcessContent ? closingIndex + 1 : block.to.col + 1
+
+              if (block.to.line === 0) {
+                column = shouldProcessContent ? closingIndex + 1 : block.to.col + 1
+                break
+              }
+
+              if (!shouldProcessContent) {
+                this.callstack.current.index = startLine + block.to.line
+                column = line.length
+                break
+              }
+
+              column = closingIndex + 1
               break
             }
 

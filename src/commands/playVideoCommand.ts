@@ -19,20 +19,29 @@ export async function playVideoCommand(engine: KirikiriEngine, props?: Record<st
   videoOptions?.cleanup?.()
 
   const video = document.createElement('video')
+  const displayScaleX = engine.canvas.clientWidth > 0
+    ? engine.canvas.clientWidth / engine.renderer.RESOLUTION.WIDTH
+    : engine.renderer.SCALE
+  const displayScaleY = engine.canvas.clientHeight > 0
+    ? engine.canvas.clientHeight / engine.renderer.RESOLUTION.HEIGHT
+    : engine.renderer.SCALE
+  const host = engine.canvas.parentElement ?? document.body
 
   video.src = await engine.getAssetUrl(parsed.storage)
 
   video.style.position = 'absolute'
-  video.style.left = `${videoOptions?.left ?? 0}px`
-  video.style.top = `${videoOptions?.top ?? 0}px`
-  video.style.width = `${videoOptions?.width ?? 800}px`
-  video.style.height = `${videoOptions?.height ?? 600}px`
+  video.style.left = `${(videoOptions?.left ?? 0) * displayScaleX}px`
+  video.style.top = `${(videoOptions?.top ?? 0) * displayScaleY}px`
+  video.style.width = `${(videoOptions?.width ?? 800) * displayScaleX}px`
+  video.style.height = `${(videoOptions?.height ?? 600) * displayScaleY}px`
   video.style.pointerEvents = 'none'
   video.autoplay = false
   video.style.backgroundColor = 'black'
   video.style.display = videoOptions?.visible === false ? 'none' : 'block'
+  video.style.objectFit = 'fill'
+  video.style.zIndex = '9000'
 
-  document.body.append(video)
+  host.append(video)
 
   let disposed = false
 

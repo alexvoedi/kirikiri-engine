@@ -1,9 +1,10 @@
 import type { ContainerChild, Graphics, TextStyleOptions } from 'pixi.js'
 import type { KirikiriInteractionSnapshot, KirikiriRendererSnapshot } from '../types/KirikiriSaveGame'
-import { Application, Assets, Container, Rectangle, Sprite, Text, Texture } from 'pixi.js'
+import { Application, Assets, CanvasTextMetrics, Container, Rectangle, Sprite, Text, Texture } from 'pixi.js'
 import { EngineEvent } from '../constants'
 import { appendCharacterWithKirikiriWrap } from '../utils/appendCharacterWithKirikiriWrap'
 import { applyImageEffectsToPixels } from '../utils/applyImageEffects'
+import { isDeferredAssetUrl, loadImageElement, loadTextureFromAssetUrl } from '../utils/pixiAsset'
 import { resolveTransitionProfile } from '../utils/resolveTransitionProfile'
 import { KirikiriLayer } from './KirikiriLayer'
 import { KirikiriRendererSnapshotManager } from './KirikiriRendererSnapshotManager'
@@ -23,6 +24,12 @@ const DEFAULT_JAPANESE_FONT_STACK = [
   'serif',
 ].join(', ')
 const MESSAGE_WRAP_RESERVE_CHARACTERS = 3
+const MESSAGE_LAYER_MARGINS = {
+  left: 32,
+  right: 48,
+  top: 16,
+  bottom: 12,
+} as const
 interface TextStyleOverrides {
   align?: 'left' | 'center' | 'right'
   fill?: string | number
@@ -57,6 +64,7 @@ export class KirikiriRenderer {
   private front!: Container<KirikiriLayer>
   private message0!: KirikiriLayer
   private message1!: KirikiriLayer
+  private clickGlyphOverlay!: Container
 
   private currentMessageLayer: 'message0' | 'message1' = 'message0'
   private currentMessagePage: 'back' | 'fore' = 'fore'
@@ -82,12 +90,7 @@ export class KirikiriRenderer {
     right: number
     top: number
     bottom: number
-  } = {
-    left: 12,
-    right: 8,
-    top: 8,
-    bottom: 8,
-  }
+  } = MESSAGE_LAYER_MARGINS
 
   /**
    * Store a unscaled location to be used in another command.
@@ -121,17 +124,15 @@ export class KirikiriRenderer {
     this.app.stage.addChild(this.front)
 
     this.message0 = new KirikiriLayer(this, 'message0', {
-      margins: {
-        left: 12,
-        right: 8,
-        top: 8,
-        bottom: 8,
-      },
+      margins: MESSAGE_LAYER_MARGINS,
     })
     this.app.stage.addChild(this.message0)
 
     this.message1 = new KirikiriLayer(this, 'message1')
     this.app.stage.addChild(this.message1)
+
+    this.clickGlyphOverlay = new Container({ label: 'click-glyph-overlay' })
+    this.app.stage.addChild(this.clickGlyphOverlay)
   }
 
   async loadAssets(files: string[]): Promise<void> {
@@ -258,12 +259,7 @@ export class KirikiriRenderer {
       return this.loadProcessedTexture(file, effects)
     }
 
-    if (isDeferredAssetUrl(file)) {
-      const image = await loadImageElement(file)
-      return Texture.from(image)
-    }
-
-    return Assets.get(file) ?? await Assets.load(file)
+    return loadTextureFromAssetUrl(file)
   }
 
   private async loadProcessedTexture(file: string, effects: {
@@ -490,28 +486,14 @@ export class KirikiriRenderer {
       firstLineWidth: availableWidth,
       wrappedLineWidth: this.wordWrapWidth,
       reserveWidth: MESSAGE_WRAP_RESERVE_CHARACTERS * fontSize,
-      measureText: value => this.measureTextWidth(value, {
-        fontFamily: textElement.style.fontFamily,
-        fontSize,
-      }),
+      measureText: value => this.measureTextWidth(value, textElement.style),
     })
   }
 
-  private measureTextWidth(text: string, style: {
-    fontFamily: string | string[]
-    fontSize: number
-  }) {
-    if (!this.textMeasureContext) {
-      return text.length * style.fontSize
-    }
+  private measureTextWidth(text: string, style: Text['style']) {
+    const metrics = CanvasTextMetrics.measureText(text || ' ', style)
 
-    const fontFamily = Array.isArray(style.fontFamily)
-      ? style.fontFamily.join(', ')
-      : style.fontFamily
-
-    this.textMeasureContext.font = `${style.fontSize}px ${fontFamily}`
-
-    return this.textMeasureContext.measureText(text).width
+    return metrics.width
   }
 
   /**
@@ -520,12 +502,13 @@ export class KirikiriRenderer {
   get wordWrapWidth() {
     const currentLayer = this[this.currentMessageLayer]
     const pageMetrics = currentLayer?.getPageMetrics(this.currentMessagePage)
+    const margins = currentLayer?.margins ?? this.messageLayerMargins
 
     if (pageMetrics?.width !== undefined) {
-      return this.SCALE * (pageMetrics.width - this.messageLayerMargins.left - this.messageLayerMargins.right)
+      return this.SCALE * (pageMetrics.width - margins.left - margins.right)
     }
 
-    return this.renderedWidth - this.SCALE * (2 * this.globalOffset.x + this.messageLayerMargins.left + this.messageLayerMargins.right)
+    return this.renderedWidth - this.SCALE * (2 * this.globalOffset.x + margins.left + margins.right)
   }
 
   setFont(data: {
@@ -751,27 +734,23 @@ export class KirikiriRenderer {
       height?: number
     }
   }) {
-    const source = await Assets.load(file)
-
-    const measure = new Texture({
-      source,
-    })
+    const measure = await loadTextureFromAssetUrl(file)
 
     const width = measure.width / 3
     const height = measure.height
 
     const baseTexture = new Texture({
-      source,
+      source: measure.source,
       frame: new Rectangle(0, 0, width, height),
     })
 
     const pressedTexture = new Texture({
-      source,
+      source: measure.source,
       frame: new Rectangle(width, 0, width, height),
     })
 
     const hoverTexture = new Texture({
-      source,
+      source: measure.source,
       frame: new Rectangle(width * 2, 0, width, height),
     })
 
@@ -939,6 +918,18 @@ export class KirikiriRenderer {
     return this.currentMessagePage
   }
 
+  getCurrentMessagePageContainer() {
+    return this[this.currentMessageLayer][this.currentMessagePage]
+  }
+
+  getCurrentMessagePageMetrics() {
+    return this[this.currentMessageLayer].getPageMetrics(this.currentMessagePage)
+  }
+
+  getClickGlyphOverlay() {
+    return this.clickGlyphOverlay
+  }
+
   setCurrentMessagePage(page: 'back' | 'fore') {
     this.currentMessagePage = page
   }
@@ -966,7 +957,11 @@ export class KirikiriRenderer {
   }
 }
 
-export function createTransitionMask(profile: ReturnType<typeof resolveTransitionProfile>, graphics: Graphics, progress: number, width: number, height: number) {
+export function createTransitionMask(profile: ReturnType<typeof resolveTransitionProfile>, graphics: Graphics | null | undefined, progress: number, width: number, height: number) {
+  if (!graphics || graphics.destroyed || !graphics.context || graphics.context.destroyed) {
+    return
+  }
+
   graphics.clear()
 
   switch (profile.kind) {
@@ -1026,25 +1021,4 @@ export function createTransitionMask(profile: ReturnType<typeof resolveTransitio
   }
 
   graphics.fill(0xFFFFFF)
-}
-
-function isDeferredAssetUrl(file: string): boolean {
-  return file.startsWith('blob:') || file.startsWith('data:')
-}
-
-async function loadImageElement(src: string): Promise<HTMLImageElement> {
-  const image = new Image()
-  image.decoding = 'async'
-  image.src = src
-
-  if (image.complete && image.naturalWidth > 0) {
-    return image
-  }
-
-  await new Promise<void>((resolve, reject) => {
-    image.addEventListener('load', () => resolve(), { once: true })
-    image.addEventListener('error', () => reject(new Error(`Failed to load image ${src}`)), { once: true })
-  })
-
-  return image
 }

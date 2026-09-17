@@ -1,3 +1,4 @@
+import type { StorageProvider } from '../src/types/StorageProvider'
 import { KirikiriEngine, Loglevel, Xp3StorageProvider } from '../src/index'
 
 const canvas = document.getElementById('canvas') as HTMLCanvasElement
@@ -151,6 +152,20 @@ function createButton(label: string, onClick: () => void | Promise<void>, option
   return button
 }
 
+function navigateToGame() {
+  const url = new URL(location.href)
+  url.searchParams.delete('preview')
+  url.searchParams.delete('devmenu')
+  location.href = url.toString()
+}
+
+function navigateToSceneSelect() {
+  const url = new URL(location.href)
+  url.searchParams.delete('preview')
+  url.searchParams.set('devmenu', '1')
+  location.href = url.toString()
+}
+
 async function waitForLaunchClick() {
   launchOverlay.style.display = 'block'
   setStatus('Click anywhere to start the game.')
@@ -193,7 +208,63 @@ globalThis.addEventListener('unhandledrejection', (event) => {
   setStatus(`Unhandled promise rejection\n${reason}`)
 })
 
-const preview = new URLSearchParams(location.search).get('preview')
+const searchParams = new URLSearchParams(location.search)
+const preview = searchParams.get('preview')
+const devmenu = searchParams.get('devmenu') === '1'
+
+const gameStorage: StorageProvider = devmenu
+  ? {
+      async readTextFile(filename, encoding) {
+        const content = await storage.readTextFile(filename, encoding)
+
+        if (filename.toLowerCase() !== 'first.ks') {
+          return content
+        }
+
+        return content.replace('f.testmode=0;', 'f.testmode=1;')
+      },
+      readBinaryFile(filename) {
+        return storage.readBinaryFile(filename)
+      },
+      resolveAssetUrl(filename) {
+        return storage.resolveAssetUrl(filename)
+      },
+    }
+  : storage
+
+const modeTools = document.createElement('div')
+modeTools.style.padding = '10px 12px'
+modeTools.style.border = '1px solid rgba(255, 255, 255, 0.16)'
+modeTools.style.background = 'rgba(0, 0, 0, 0.76)'
+modeTools.style.color = '#f3f3f3'
+modeTools.style.font = '12px/1.4 monospace'
+modeTools.style.display = 'grid'
+modeTools.style.gap = '8px'
+sidebar.prepend(modeTools)
+
+const modeTitle = document.createElement('strong')
+modeTitle.textContent = 'Dev Mode'
+modeTools.append(modeTitle)
+
+const modeHint = document.createElement('div')
+modeHint.textContent = preview
+  ? `Preview active: ${preview}`
+  : devmenu
+    ? 'Scene select mode active'
+    : 'Game runtime active'
+modeTools.append(modeHint)
+
+modeTools.append(createButton('Enter Game', () => {
+  navigateToGame()
+}, {
+  disabled: !preview && !devmenu,
+}))
+
+modeTools.append(createButton('Scene Select', () => {
+  navigateToSceneSelect()
+}, {
+  disabled: preview || devmenu,
+}))
 
 async function main() {
   if (preview) {
@@ -232,7 +303,7 @@ async function main() {
       game: {
         entry: 'first.ks',
         root: 'http://localhost:1337',
-        storage,
+        storage: gameStorage,
       },
       options: {
         loglevel: Loglevel.Debug,

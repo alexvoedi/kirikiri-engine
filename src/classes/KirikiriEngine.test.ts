@@ -139,6 +139,51 @@ describe('kirikiriEngine', () => {
     expect(engine.callstack.current.index).toBe(1)
   })
 
+  it('continues into multiline if block content when the condition is true', async () => {
+    const engine = await setupEngine()
+
+    engine.callstack.push({
+      file: 'first',
+      lines: [
+        '[if exp="3==3"]',
+        '[eval exp="sf.firstclear=12"]',
+        '[endif]',
+      ],
+      index: 0,
+    })
+
+    await (engine as unknown as { processCurrentLine: () => Promise<void> }).processCurrentLine()
+
+    expect(engine.callstack.current.index).toBe(1)
+    expect(engine.globalScriptContext.sf.firstclear).toBe(0)
+
+    await (engine as unknown as { processCurrentLine: () => Promise<void> }).processCurrentLine()
+
+    expect(engine.globalScriptContext.sf.firstclear).toBe(12)
+    expect(engine.callstack.current.index).toBe(2)
+  })
+
+  it('skips multiline if block content when the condition is false', async () => {
+    const engine = await setupEngine()
+    engine.globalScriptContext.sf.firstclear = 0
+
+    engine.callstack.push({
+      file: 'first',
+      lines: [
+        '[if exp="3==4"]',
+        '[eval exp="sf.firstclear=12"]',
+        '[endif]',
+        '[eval exp="sf.firstclear=5"]',
+      ],
+      index: 0,
+    })
+
+    await (engine as unknown as { processCurrentLine: () => Promise<void> }).processCurrentLine()
+
+    expect(engine.callstack.current.index).toBe(3)
+    expect(engine.globalScriptContext.sf.firstclear).toBe(0)
+  })
+
   it('stops processing the current line after a jump changes the callstack index', async () => {
     const engine = await setupEngine()
 

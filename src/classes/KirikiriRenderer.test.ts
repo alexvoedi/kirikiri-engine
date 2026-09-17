@@ -1,11 +1,12 @@
-import { Assets } from 'pixi.js'
+import { Assets, Graphics } from 'pixi.js'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { appendCharacterWithKirikiriWrap } from '../utils/appendCharacterWithKirikiriWrap'
-import { KirikiriRenderer } from './KirikiriRenderer'
+import { createTransitionMask, KirikiriRenderer } from './KirikiriRenderer'
 
 describe('kirikiriRenderer', () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllGlobals()
   })
 
   it('waits for asset loading to complete', async () => {
@@ -33,7 +34,22 @@ describe('kirikiriRenderer', () => {
   it('calculates word wrap width from renderer dimensions', () => {
     const renderer = new KirikiriRenderer(document.createElement('canvas'))
 
-    expect(renderer.wordWrapWidth).toBe(1496)
+    expect(renderer.wordWrapWidth).toBe(1376)
+  })
+
+  it('uses the message insets for the text container origin', async () => {
+    const renderer = new KirikiriRenderer(document.createElement('canvas'))
+
+    await renderer.init()
+    renderer.addCharacterToText('a')
+
+    const textContainer = (renderer as unknown as { message0: { fore: { getChildByLabel: (label: string) => { x: number, y: number } | undefined } } })
+      .message0
+      .fore
+      .getChildByLabel('text-container')
+
+    expect(textContainer?.x).toBe(64)
+    expect(textContainer?.y).toBe(32)
   })
 
   it('shakes around the current stage position', () => {
@@ -95,6 +111,19 @@ describe('kirikiriRenderer', () => {
     expect(result).toBe('abcd\ne')
   })
 
+  it('wraps when the next character would overflow even before the reserve threshold', () => {
+    const result = appendCharacterWithKirikiriWrap({
+      text: 'abc',
+      character: 'd',
+      firstLineWidth: 35,
+      wrappedLineWidth: 35,
+      reserveWidth: 0,
+      measureText: value => value.length * 10,
+    })
+
+    expect(result).toBe('abc\nd')
+  })
+
   it('keeps japanese closing punctuation on the current line', () => {
     const result = appendCharacterWithKirikiriWrap({
       text: 'abcd',
@@ -108,6 +137,23 @@ describe('kirikiriRenderer', () => {
     expect(result).toBe('abcd。')
   })
 
+  it('skips transition mask updates for destroyed graphics', () => {
+    const graphics = new Graphics()
+
+    graphics.destroy()
+
+    expect(() => createTransitionMask(
+      {
+        kind: 'wipe',
+        direction: 'left',
+      },
+      graphics,
+      0.5,
+      100,
+      100,
+    )).not.toThrow()
+  })
+
   it('uses full message width after the first indented line wraps', () => {
     const result = appendCharacterWithKirikiriWrap({
       text: 'ab\ncd',
@@ -119,5 +165,31 @@ describe('kirikiriRenderer', () => {
     })
 
     expect(result).toBe('ab\ncde')
+  })
+
+  it('loads blob-backed button sprites without pixi asset parsing', async () => {
+    const renderer = new KirikiriRenderer(document.createElement('canvas'))
+    const originalImage = globalThis.Image
+    const load = vi.spyOn(Assets, 'load')
+
+    class MockImage extends originalImage {
+      constructor() {
+        super()
+        Object.defineProperty(this, 'complete', { configurable: true, get: () => true })
+        Object.defineProperty(this, 'naturalWidth', { configurable: true, get: () => 72 })
+        Object.defineProperty(this, 'naturalHeight', { configurable: true, get: () => 24 })
+      }
+    }
+
+    vi.stubGlobal('Image', MockImage)
+
+    const sprite = await renderer.createInteractiveButtonSprite(
+      'blob:http://localhost/button',
+      vi.fn(async () => {}),
+    )
+
+    expect(load).not.toHaveBeenCalled()
+    expect(sprite.width).toBe(48)
+    expect(sprite.height).toBe(48)
   })
 })

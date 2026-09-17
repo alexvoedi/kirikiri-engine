@@ -2,7 +2,8 @@ import type { ContainerChild, TextStyleOptions } from 'pixi.js'
 import type { JsonValue, KirikiriInteractionSnapshot, KirikiriRendererNodeSnapshot, KirikiriRendererSnapshot } from '../types/KirikiriSaveGame'
 import type { KirikiriLayer } from './KirikiriLayer'
 import type { KirikiriRenderer } from './KirikiriRenderer'
-import { Assets, Container, Rectangle, Sprite, Text, Texture } from 'pixi.js'
+import { Container, Rectangle, Sprite, Text, Texture } from 'pixi.js'
+import { loadTextureFromAssetUrl } from '../utils/pixiAsset'
 
 interface InteractiveNode {
   __kirikiriInteraction?: KirikiriInteractionSnapshot
@@ -260,9 +261,7 @@ export class KirikiriRendererSnapshotManager {
   }
 
   private async loadSpriteTexture(file: string, frame?: KirikiriRendererNodeSnapshot['frame']) {
-    const texture = isDeferredAssetUrl(file)
-      ? Texture.from(await loadImageElement(file))
-      : Texture.from(await Assets.load(file))
+    const texture = await loadTextureFromAssetUrl(file)
 
     if (!frame) {
       return texture
@@ -356,18 +355,4 @@ export class KirikiriRendererSnapshotManager {
 
     return undefined
   }
-}
-
-function isDeferredAssetUrl(file: string) {
-  return file.startsWith('blob:') || file.startsWith('data:')
-}
-
-function loadImageElement(src: string): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const image = new Image()
-
-    image.onload = () => resolve(image)
-    image.onerror = () => reject(new Error(`Failed to load image ${src}`))
-    image.src = src
-  })
 }

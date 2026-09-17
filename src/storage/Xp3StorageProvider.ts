@@ -386,6 +386,9 @@ function getMimeType(filename: string): string | undefined {
       return 'audio/wav'
     case '.mp4':
       return 'video/mp4'
+    case '.mpg':
+    case '.mpeg':
+      return 'video/mpeg'
     case '.webm':
       return 'video/webm'
     default:

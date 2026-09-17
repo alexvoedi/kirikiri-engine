@@ -26,6 +26,7 @@ export function appendCharacterWithKirikiriWrap({
   const currentLineIndex = Math.max(lines.length - 1, 0)
   const availableWidth = currentLineIndex === 0 ? firstLineWidth : wrappedLineWidth
   const currentWidth = measureText(currentLine)
+  const nextWidth = measureText(`${currentLine}${character}`)
   const relinexpos = Math.max(0, availableWidth - reserveWidth)
   const lastDrawnCh = currentLine.at(-1) ?? ''
 
@@ -36,6 +37,17 @@ export function appendCharacterWithKirikiriWrap({
     )
 
     if (canBreakBeforeCharacter || currentWidth > availableWidth) {
+      return `${text}\n${character}`
+    }
+  }
+
+  if (nextWidth > availableWidth) {
+    const canBreakBeforeCharacter = (
+      ((lastDrawnCh === '' || !KINSOKU_LEADING.includes(lastDrawnCh)) && !KINSOKU_FOLLOWING.includes(character))
+      || (lastDrawnCh !== '' && KINSOKU_FOLLOWING_WEAK.includes(lastDrawnCh) && KINSOKU_FOLLOWING_WEAK.includes(character))
+    )
+
+    if (canBreakBeforeCharacter) {
       return `${text}\n${character}`
     }
   }
